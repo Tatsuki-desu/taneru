@@ -37,6 +37,7 @@
       const [event, setEvent] = useState("");
       const [question, setQuestion] = useState("");
       const [tags, setTags] = useState([]);
+      const [feedback, setFeedback] = useState("");
       const [entries, setEntries] = useState([]);
       const [saved, setSaved] = useState(false);
       useEffect(() => { setEntries(loadEntries()); }, []);
@@ -58,11 +59,13 @@
           event: event.trim(),
           question: question.trim(),
           tags: tags,
+          feedback: feedback.trim(),
         };
         const updated = [newEntry, ...loadEntries()];
         saveEntries(updated);
         setEntries(updated);
         setEvent(""); setQuestion(""); setTags([]);
+        setFeedback("");
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       };
@@ -81,6 +84,10 @@
               <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} placeholder="「なぜ？」と思ったこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             <div style={{ marginTop: 14 }}>
+              <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>👨‍🏫 指導教員からのフィードバック</div>
+              <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="先生から言われたこと、アドバイスなど..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+            </div>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>🏷 感情タグ（タップで選択）</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {emotionTags.map(t => (
@@ -108,6 +115,7 @@
                   </div>
                   {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: entry.question ? 8 : 0 }}>{entry.event}</div>}
                   {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.7, fontStyle: "italic" }}>💡 {entry.question}</div>}
+                  {entry.feedback && <div style={{ fontSize: 13, color: C.gold, lineHeight: 1.7, fontStyle: "italic", marginTop: 4 }}>👨‍🏫 {entry.feedback}</div>}
                 </div>
               ))}
             </div>
