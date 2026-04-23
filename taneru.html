@@ -16,41 +16,64 @@
 </head>
 <body>
   <div id="root"></div>
-
   <script type="text/babel">
-    const { useState } = React;
-
+    const { useState, useEffect } = React;
     const C = {
       bg: "#F7F3ED", bgDeep: "#EDE7DC", green: "#2D5016", greenMid: "#4A7C2F",
       greenLight: "#8FB573", cream: "#FAF7F2", terra: "#C4622D",
-      terraLight: "#E8956A", ink: "#1C1C1A", inkLight: "#6B6860", gold: "#D4A843",
+      ink: "#1C1C1A", inkLight: "#6B6860", gold: "#D4A843",
     };
-
-    // ── ホーム画面 ─────────────────────────────
+    function loadEntries() {
+      const data = localStorage.getItem("taneru_entries");
+      return data ? JSON.parse(data) : [];
+    }
+    function saveEntries(entries) {
+      localStorage.setItem("taneru_entries", JSON.stringify(entries));
+    }
     function HomeScreen() {
       const today = new Date().toLocaleDateString("ja-JP", {
         year: "numeric", month: "long", day: "numeric", weekday: "short",
       });
+      const [event, setEvent] = useState("");
+      const [question, setQuestion] = useState("");
       const [tags, setTags] = useState([]);
-      const toggleTag = (t) => setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+      const [entries, setEntries] = useState([]);
+      const [saved, setSaved] = useState(false);
+      useEffect(() => { setEntries(loadEntries()); }, []);
+      const toggleTag = (t) => {
+        setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+      };
+      const handleSave = () => {
+        if (!event.trim() && !question.trim()) return;
+        const newEntry = {
+          id: Date.now(),
+          date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
+          dateTime: new Date().toISOString(),
+          event: event.trim(),
+          question: question.trim(),
+          tags: tags,
+        };
+        const updated = [newEntry, ...loadEntries()];
+        saveEntries(updated);
+        setEntries(updated);
+        setEvent(""); setQuestion(""); setTags([]);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      };
       const emotionTags = ["😮 驚き", "😟 モヤモヤ", "💡 ひらめき", "❓ 疑問"];
-
       return (
         <div>
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: C.inkLight, letterSpacing: "0.12em", marginBottom: 4 }}>{today}</div>
             <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic" }}>今日の気づきを記録する</div>
           </div>
-
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📝 今日の出来事・観察</div>
-            <textarea rows={4} placeholder="今日の実習で気になったこと、観察したこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
-
+            <textarea value={event} onChange={(e) => setEvent(e.target.value)} rows={4} placeholder="今日の実習で気になったこと、観察したこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>💡 疑問・気づき</div>
-              <textarea rows={3} placeholder="「なぜ？」と思ったこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+              <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} placeholder="「なぜ？」と思ったこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
-
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>🏷 感情タグ（タップで選択）</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -59,45 +82,50 @@
                 ))}
               </div>
             </div>
-
-            <button style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px 24px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif", fontStyle: "italic", letterSpacing: "0.04em", width: "100%", marginTop: 16 }}>
-              この気づきを記録する 🌱
+            <button onClick={handleSave} style={{ background: saved ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px 24px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif", fontStyle: "italic", letterSpacing: "0.04em", width: "100%", marginTop: 16, transition: "background 0.2s" }}>
+              {saved ? "保存しました！✓" : "この気づきを記録する 🌱"}
             </button>
           </div>
-
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.terra}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase" }}>昨日の記録</div>
-              <span style={{ background: C.terra, color: "#fff", borderRadius: 20, padding: "2px 10px", fontSize: 10, fontWeight: "bold" }}>4/9</span>
+          {entries.length > 0 ? (
+            <div>
+              <div style={{ fontSize: 11, color: C.inkLight, letterSpacing: "0.12em", marginBottom: 10, marginTop: 20 }}>これまでの記録（{entries.length}件）</div>
+              {entries.map((entry) => (
+                <div key={entry.id} style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.terra}`, borderRadius: 16, padding: "16px 20px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
+                    {entry.tags.length > 0 && (
+                      <div>{entry.tags.map(t => (
+                        <span key={t} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 20, fontSize: 10, background: C.terra + "22", color: C.terra, marginLeft: 4 }}>{t}</span>
+                      ))}</div>
+                    )}
+                  </div>
+                  {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: entry.question ? 8 : 0 }}>{entry.event}</div>}
+                  {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.7, fontStyle: "italic" }}>💡 {entry.question}</div>}
+                </div>
+              ))}
             </div>
-            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7 }}>「待ち時間に子どもたちが自分で活動を見つけていた。先生は何もしていなかったのに...」</div>
-            <div style={{ marginTop: 8 }}>
-              <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, background: C.terra + "22", color: C.terra, marginRight: 6 }}>😟 モヤモヤ</span>
-              <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, background: C.greenMid + "22", color: C.greenMid }}>授業中</span>
+          ) : (
+            <div style={{ textAlign: "center", padding: "30px 20px", color: C.inkLight }}>
+              <div style={{ fontSize: 40, marginBottom: 10, opacity: 0.4 }}>🌱</div>
+              <div style={{ fontSize: 13 }}>記録を積み重ねると、<br />研究のテーマが見えてくる</div>
             </div>
-          </div>
-
-          <div style={{ textAlign: "center", padding: "30px 20px", color: C.inkLight }}>
-            <div style={{ fontSize: 40, marginBottom: 10, opacity: 0.4 }}>🌱</div>
-            <div style={{ fontSize: 13 }}>記録を積み重ねると、<br />研究のテーマが見えてくる</div>
-          </div>
+          )}
         </div>
       );
     }
-
-    // ── カレンダー画面 ──────────────────────────
     function CalendarScreen() {
+      const [entries, setEntries] = useState([]);
+      useEffect(() => { setEntries(loadEntries()); }, []);
       const days = ["月", "火", "水", "木", "金", "土", "日"];
-      const recorded = [1, 2, 3, 4, 7, 8, 9];
-      const today = 10;
+      const today = new Date().getDate();
+      const recordedDays = entries.map(e => new Date(e.dateTime).getDate());
       return (
         <div>
           <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>実習カレンダー</div>
           <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>記録した日が色づきます</div>
-
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
-              <span style={{ fontSize: 15, fontWeight: "bold", color: C.ink }}>2026年4月</span>
+              <span style={{ fontSize: 15, fontWeight: "bold", color: C.ink }}>{new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long" })}</span>
               <span style={{ background: C.greenMid, color: "#fff", borderRadius: 20, padding: "2px 12px", fontSize: 10, fontWeight: "bold" }}>実習中</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
@@ -105,169 +133,76 @@
                 <div key={d} style={{ textAlign: "center", fontSize: 10, color: C.inkLight, padding: "4px 0" }}>{d}</div>
               ))}
               {Array.from({ length: 30 }, (_, i) => i + 1).map(d => {
-                const isRec = recorded.includes(d);
+                const isRec = recordedDays.includes(d);
                 const isToday = d === today;
                 return (
-                  <div key={d} style={{ textAlign: "center", padding: "7px 0", borderRadius: 8, fontSize: 12, background: isToday ? C.green : isRec ? C.greenLight + "55" : "transparent", color: isToday ? "#fff" : isRec ? C.green : C.inkLight, fontWeight: isRec || isToday ? "bold" : "normal", cursor: "pointer" }}>{d}</div>
+                  <div key={d} style={{ textAlign: "center", padding: "7px 0", borderRadius: 8, fontSize: 12, background: isToday ? C.green : isRec ? C.greenLight + "55" : "transparent", color: isToday ? "#fff" : isRec ? C.green : C.inkLight, fontWeight: isRec || isToday ? "bold" : "normal" }}>{d}</div>
                 );
               })}
             </div>
           </div>
-
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📊 実習の進捗</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-              {[["記録した日", "8日", C.green], ["総エントリ", "14件", C.terra], ["気づき数", "23個", C.gold]].map(([label, val, color]) => (
-                <div key={label} style={{ textAlign: "center", background: C.bg, borderRadius: 10, padding: "12px 0" }}>
-                  <div style={{ fontSize: 20, fontWeight: "bold", color }}>{val}</div>
-                  <div style={{ fontSize: 9, color: C.inkLight, marginTop: 2 }}>{label}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[["記録した件数", `${entries.length}件`, C.green], ["気づき数", `${entries.filter(e => e.question).length}個`, C.terra]].map(([label, val, color]) => (
+                <div key={label} style={{ textAlign: "center", background: C.bg, borderRadius: 10, padding: "14px 0" }}>
+                  <div style={{ fontSize: 24, fontWeight: "bold", color }}>{val}</div>
+                  <div style={{ fontSize: 10, color: C.inkLight, marginTop: 4 }}>{label}</div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>🔥 気づきヒートマップ</div>
-            <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 10 }}>1週目〜2週目の活動量</div>
-            <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 60 }}>
-              {[3, 5, 2, 4, 6, 1, 4, 7, 3, 5].map((v, i) => (
-                <div key={i} style={{ flex: 1, height: `${v / 7 * 100}%`, borderRadius: 4, background: C.green, opacity: 0.3 + v / 7 * 0.7 }} />
               ))}
             </div>
           </div>
         </div>
       );
     }
-
-    // ── AI分析画面 ──────────────────────────────
     function AIScreen() {
       return (
         <div>
           <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>AI分析レポート</div>
           <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>記録から研究の種を見つける</div>
-
-          <div style={{ background: C.green, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.15em", color: C.greenLight, marginBottom: 8 }}>TANERU AI</div>
-            <div style={{ fontSize: 14, color: C.cream, lineHeight: 1.8 }}>
-              8日間の記録を分析しました。<br />
-              <strong>「待ち時間」「自発的な行動」</strong>というキーワードが繰り返し登場しています。ここに研究の核心がありそうです。
-            </div>
-          </div>
-
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🔵 キーワードクラスター</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {[["待ち時間", 7, 17], ["声かけ", 5, 15], ["自発的", 4, 14], ["環境", 3, 13], ["ルール", 3, 12], ["観察", 2, 11]].map(([word, count, size]) => (
-                <span key={word} style={{ display: "inline-block", padding: "5px 14px", borderRadius: 20, fontSize: size, background: C.greenMid + "22", color: C.greenMid, cursor: "pointer" }}>{word} ({count})</span>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>💭 問いカード（AI生成）</div>
-            {["なぜ「待ち時間」に子どもは自発的な行動を起こすのか？", "先生の「声かけ」のタイミングは何を基準にしているのか？", "環境設定は子どもの行動にどう影響するのか？"].map((q, i) => (
-              <div key={i} style={{ background: C.bg, border: `1px dashed ${C.greenLight}`, borderRadius: 10, padding: "12px 14px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6, flex: 1 }}>{q}</div>
-                <span style={{ marginLeft: 10, fontSize: 18, cursor: "pointer" }}>⭐️</span>
-              </div>
-            ))}
-            <button style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%", marginTop: 4 }}>
-              新しい問いを生成する
-            </button>
-          </div>
-
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>📋 今週のふりかえり（AI要約）</div>
-            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.8 }}>
-              今週は「子どもの自律性」に関する観察が多く見られました。特に<strong>「待ち時間」という非構造的な時間</strong>での子どもの行動に繰り返し注目しています。これは課題研究のテーマになりうる重要な視点です。
-            </div>
+          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "30px 20px", textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.4 }}>🤖</div>
+            <div style={{ fontSize: 14, color: C.ink, lineHeight: 1.8 }}>記録が増えたら<br />AIが分析してくれます</div>
+            <div style={{ fontSize: 12, color: C.inkLight, marginTop: 8 }}>まずはホームで記録を始めましょう</div>
           </div>
         </div>
       );
     }
-
-    // ── 研究ノート画面 ──────────────────────────
     function ResearchScreen() {
-      const [tab, setTab] = useState(0);
       return (
         <div>
           <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>研究ノート</div>
-          <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 16 }}>日記から昇格した気づきを管理する</div>
-
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            {["実地研究Ⅱ", "課題研究Ⅱ"].map((label, i) => (
-              <button key={label} onClick={() => setTab(i)} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1.5px solid ${tab === i ? C.green : C.bgDeep}`, background: tab === i ? C.green : "transparent", color: tab === i ? C.cream : C.inkLight, fontFamily: "'Georgia', serif", fontSize: 13, cursor: "pointer" }}>{label}</button>
-            ))}
+          <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>日記から昇格した気づきを管理する</div>
+          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "30px 20px", textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.4 }}>🔬</div>
+            <div style={{ fontSize: 14, color: C.ink, lineHeight: 1.8 }}>記録が増えたら<br />研究テーマを整理できます</div>
+            <div style={{ fontSize: 12, color: C.inkLight, marginTop: 8 }}>まずはホームで記録を始めましょう</div>
           </div>
-
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.gold}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase" }}>🔬 リサーチクエスチョン</div>
-              <span style={{ background: C.gold, color: "#fff", borderRadius: 20, padding: "2px 10px", fontSize: 10, fontWeight: "bold" }}>仮</span>
-            </div>
-            <div style={{ fontSize: 15, color: C.ink, lineHeight: 1.7, fontStyle: "italic" }}>「待ち時間」における子どもの自発的行動を促す環境要因とは何か？</div>
-            <button style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%", marginTop: 12 }}>AIと問いを磨く</button>
-          </div>
-
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📌 昇格した気づき</div>
-            {[["4/9", "待ち時間に子どもたちが自分で活動を見つけていた", "核心的気づき", C.terra], ["4/8", "先生が何も言わなくても片付けが始まった", "観察メモ", C.greenMid], ["4/7", "コーナーの配置が変わった日に行動が変化した", "仮説のヒント", C.gold]].map(([date, text, tag, color]) => (
-              <div key={date} style={{ borderBottom: `1px solid ${C.bgDeep}`, paddingBottom: 12, marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ background: color, color: "#fff", borderRadius: 20, padding: "2px 10px", fontSize: 10, fontWeight: "bold" }}>{tag}</span>
-                  <span style={{ fontSize: 11, color: C.inkLight }}>{date}</span>
-                </div>
-                <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{text}</div>
-              </div>
-            ))}
-          </div>
-
-          <button style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px 24px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif", fontStyle: "italic", width: "100%" }}>
-            ＋ 新しい気づきを昇格させる
-          </button>
         </div>
       );
     }
-
-    // ── 設定画面 ────────────────────────────────
     function SettingsScreen() {
+      const handleClear = () => {
+        if (window.confirm("すべての記録を削除しますか？この操作は元に戻せません。")) {
+          localStorage.removeItem("taneru_entries");
+          alert("記録を削除しました。");
+        }
+      };
       return (
         <div>
           <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>設定</div>
           <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>実習情報・アプリの設定</div>
-
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🏫 実習情報</div>
-            {[["実習校名", "〇〇小学校"], ["担当学年", "3年生"], ["実習期間", "2026/4/1 〜 4/30"]].map(([label, val]) => (
-              <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.bgDeep}` }}>
-                <span style={{ fontSize: 12, color: C.inkLight }}>{label}</span>
-                <span style={{ fontSize: 13, color: C.ink }}>{val}</span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>🤖 AI設定</div>
-            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>AIによる分析にはAnthropic APIキーが必要です。</div>
-            <button style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>APIキーを設定する</button>
-          </div>
-
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>💾 データ管理</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>記録をエクスポート（JSON）</button>
-              <button style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>レポート用にエクスポート（テキスト）</button>
-            </div>
+            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>記録はこのMacのブラウザに保存されています。</div>
+            <button onClick={handleClear} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>
+              すべての記録を削除する
+            </button>
           </div>
-
-          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>
-            Taneru v0.1 — 気づきから研究へ 🌱
-          </div>
+          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.1 — 気づきから研究へ 🌱</div>
         </div>
       );
     }
-
-    // ── メインアプリ ─────────────────────────────
     const NAV = [
       { id: "home", icon: "✏️", label: "記録" },
       { id: "calendar", icon: "📅", label: "カレンダー" },
@@ -275,29 +210,28 @@
       { id: "research", icon: "🔬", label: "研究" },
       { id: "settings", icon: "⚙️", label: "設定" },
     ];
-    const SCREENS = { home: HomeScreen, calendar: CalendarScreen, ai: AIScreen, research: ResearchScreen, settings: SettingsScreen };
-
     function App() {
       const [screen, setScreen] = useState("home");
-      const Screen = SCREENS[screen];
+      const screens = {
+        home: <HomeScreen />,
+        calendar: <CalendarScreen />,
+        ai: <AIScreen />,
+        research: <ResearchScreen />,
+        settings: <SettingsScreen />,
+      };
       return (
-        <div style={{ fontFamily: "'Georgia', 'Times New Roman', serif", background: C.bg, minHeight: "100vh", maxWidth: 440, margin: "0 auto", display: "flex", flexDirection: "column", position: "relative", boxShadow: "0 0 40px rgba(0,0,0,0.12)" }}>
-          {/* ヘッダー */}
+        <div style={{ fontFamily: "'Georgia', 'Times New Roman', serif", background: C.bg, minHeight: "100vh", maxWidth: 440, margin: "0 auto", display: "flex", flexDirection: "column", boxShadow: "0 0 40px rgba(0,0,0,0.12)" }}>
           <div style={{ background: C.green, padding: "18px 24px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", overflow: "hidden" }}>
             <div>
-              <div style={{ fontSize: 22, fontWeight: "bold", color: C.cream, letterSpacing: "0.08em", fontStyle: "italic" }}>Taneru</div>
-              <div style={{ fontSize: 10, color: C.greenLight, letterSpacing: "0.2em", textTransform: "uppercase", marginTop: 2 }}>気づきから研究へ</div>
+              <div style={{ fontSize: 22, fontWeight: "bold", color: "#FAF7F2", letterSpacing: "0.08em", fontStyle: "italic" }}>Taneru</div>
+              <div style={{ fontSize: 10, color: "#8FB573", letterSpacing: "0.2em", textTransform: "uppercase", marginTop: 2 }}>気づきから研究へ</div>
             </div>
             <div style={{ fontSize: 52, opacity: 0.12, position: "absolute", right: 16, top: 4 }}>🌿</div>
           </div>
-
-          {/* コンテンツ */}
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 100px" }}>
-            <Screen />
+            {screens[screen]}
           </div>
-
-          {/* ボトムナビ */}
-          <div style={{ position: "sticky", bottom: 0, background: C.cream, borderTop: `1px solid ${C.bgDeep}`, display: "flex", justifyContent: "space-around", padding: "10px 0 16px", boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" }}>
+          <div style={{ position: "sticky", bottom: 0, background: "#FAF7F2", borderTop: `1px solid ${C.bgDeep}`, display: "flex", justifyContent: "space-around", padding: "10px 0 16px", boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" }}>
             {NAV.map(({ id, icon, label }) => (
               <div key={id} onClick={() => setScreen(id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", padding: "4px 10px", borderRadius: 12, background: screen === id ? C.green + "18" : "transparent", transition: "all 0.15s" }}>
                 <span style={{ fontSize: 22, opacity: screen === id ? 1 : 0.5 }}>{icon}</span>
@@ -308,7 +242,6 @@
         </div>
       );
     }
-
     ReactDOM.createRoot(document.getElementById("root")).render(<App />);
   </script>
 </body>
