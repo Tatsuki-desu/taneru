@@ -42,6 +42,7 @@
       const [feedback, setFeedback] = useState("");
       const [entries, setEntries] = useState([]);
       const [saved, setSaved] = useState(false);
+      const [search, setSearch] = useState("");
       useEffect(() => { setEntries(loadEntries()); }, []);
       const toggleTag = (t) => {
         setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
@@ -71,6 +72,15 @@
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       };
+      const filteredEntries = entries.filter(e => {
+        if (!search.trim()) return true;
+        const keyword = search.trim().toLowerCase();
+        return (
+          e.event.toLowerCase().includes(keyword) ||
+          e.question.toLowerCase().includes(keyword) ||
+          (e.feedback && e.feedback.toLowerCase().includes(keyword))
+        );
+      });
       const emotionTags = ["😮 驚き", "😟 モヤモヤ", "💡 ひらめき", "❓ 疑問"];
       return (
         <div>
@@ -107,8 +117,13 @@
           </div>
           {entries.length > 0 ? (
             <div>
-              <div style={{ fontSize: 11, color: C.inkLight, letterSpacing: "0.12em", marginBottom: 10, marginTop: 20 }}>これまでの記録（{entries.length}件）</div>
-              {entries.map((entry) => (
+            <div style={{ marginBottom: 12 }}>
+                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 キーワードで検索..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.cream, color: C.ink, outline: "none" }} />
+                <div style={{ fontSize: 11, color: C.inkLight, marginTop: 6, textAlign: "right" }}>
+                  {search ? `「${search}」の検索結果：${filteredEntries.length}件` : `これまでの記録（${entries.length}件）`}
+                </div>
+              </div>
+              {filteredEntries.map((entry) => (
                 <div key={entry.id} style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.terra}`, borderRadius: 16, padding: "16px 20px", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
