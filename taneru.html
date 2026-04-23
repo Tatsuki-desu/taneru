@@ -34,6 +34,8 @@
       const today = new Date().toLocaleDateString("ja-JP", {
         year: "numeric", month: "long", day: "numeric", weekday: "short",
       });
+      const todayStr = new Date().toISOString().split("T")[0];
+      const [selectedDate, setSelectedDate] = useState(todayStr);
       const [event, setEvent] = useState("");
       const [question, setQuestion] = useState("");
       const [tags, setTags] = useState([]);
@@ -54,8 +56,8 @@
         if (!event.trim() && !question.trim()) return;
         const newEntry = {
           id: Date.now(),
-          date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
-          dateTime: new Date().toISOString(),
+          date: new Date(selectedDate + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
+          dateTime: new Date(selectedDate + "T00:00:00").toISOString(),
           event: event.trim(),
           question: question.trim(),
           tags: tags,
@@ -77,6 +79,10 @@
             <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic" }}>今日の気づきを記録する</div>
           </div>
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📅 記録する日付</div>
+              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
+            </div>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📝 今日の出来事・観察</div>
             <textarea value={event} onChange={(e) => setEvent(e.target.value)} rows={4} placeholder="今日の実習で気になったこと、観察したこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             <div style={{ marginTop: 14 }}>
