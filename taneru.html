@@ -43,6 +43,12 @@
       const toggleTag = (t) => {
         setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
       };
+      const handleDelete = (id) => {
+        if (!window.confirm("この記録を削除しますか？")) return;
+        const updated = loadEntries().filter(e => e.id !== id);
+        saveEntries(updated);
+        setEntries(updated);
+      };
       const handleSave = () => {
         if (!event.trim() && !question.trim()) return;
         const newEntry = {
@@ -92,7 +98,8 @@
               {entries.map((entry) => (
                 <div key={entry.id} style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.terra}`, borderRadius: 16, padding: "16px 20px", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
+                  <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
+                    <button onClick={() => handleDelete(entry.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 16, padding: "0 4px" }}>🗑</button>
                     {entry.tags.length > 0 && (
                       <div>{entry.tags.map(t => (
                         <span key={t} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 20, fontSize: 10, background: C.terra + "22", color: C.terra, marginLeft: 4 }}>{t}</span>
