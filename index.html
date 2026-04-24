@@ -20,7 +20,8 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
  
     const firebaseConfig = {
       apiKey: "AIzaSyC44xqcJ3rs2aBqJLslaz51dj46Sck45Pw",
@@ -33,25 +34,25 @@
  
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
  
-    // dbをグローバルに公開してReactから使えるようにする
     window._taneruDB = db;
-    window._taneruFirestore = {
-      collection, addDoc, getDocs, deleteDoc, doc, setDoc, onSnapshot, query, orderBy
-    };
+    window._taneruAuth = auth;
+    window._taneruFirestore = { collection, addDoc, getDocs, deleteDoc, doc, setDoc, query, orderBy };
+    window._taneruAuthFns = { signInWithEmailAndPassword, signOut, onAuthStateChanged };
     window._taneruDBReady = true;
     window.dispatchEvent(new Event("taneruDBReady"));
   </script>
  
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect } = React;
     const C = {
       bg: "#F7F3ED", bgDeep: "#EDE7DC", green: "#2D5016", greenMid: "#4A7C2F",
       greenLight: "#8FB573", cream: "#FAF7F2", terra: "#C4622D",
       ink: "#1C1C1A", inkLight: "#6B6860", gold: "#D4A843",
     };
  
-    // ── Firestore操作ヘルパー ────────────────────
+    // ── Firestore操作 ────────────────────────────
     function getDB() { return window._taneruDB; }
     function getFS() { return window._taneruFirestore; }
  
@@ -59,36 +60,20 @@
       const { collection, addDoc } = getFS();
       await addDoc(collection(getDB(), "entries"), entry);
     }
- 
     async function fsDeleteEntry(id) {
       const { doc, deleteDoc } = getFS();
       await deleteDoc(doc(getDB(), "entries", id));
     }
- 
     async function fsGetEntries() {
       const { collection, getDocs, query, orderBy } = getFS();
       const q = query(collection(getDB(), "entries"), orderBy("dateTime", "desc"));
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ ...d.data(), id: d.id }));
     }
- 
-    async function fsSaveDoc(docName, data) {
-      const { doc, setDoc } = getFS();
-      await setDoc(doc(getDB(), "settings", docName), data);
-    }
- 
-    async function fsGetDoc(docName) {
-      const { doc, getDocs, collection } = getFS();
-      const { getDoc } = await import("https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js");
-      const snap = await getDoc(doc(getDB(), "settings", docName));
-      return snap.exists() ? snap.data() : null;
-    }
- 
     async function fsAddAILog(log) {
       const { collection, addDoc } = getFS();
       await addDoc(collection(getDB(), "ai_logs"), log);
     }
- 
     async function fsGetAILogs() {
       const { collection, getDocs, query, orderBy } = getFS();
       const q = query(collection(getDB(), "ai_logs"), orderBy("dateTime", "desc"));
@@ -121,7 +106,6 @@
       } catch (e) { alert("通信エラーが発生しました。"); return null; }
     }
  
-    // ── ローカルフォールバック（オフライン用）────
     function loadEntriesLocal() {
       const data = localStorage.getItem("taneru_entries");
       return data ? JSON.parse(data) : [];
@@ -130,7 +114,86 @@
       localStorage.setItem("taneru_entries", JSON.stringify(entries));
     }
  
-    // ── 同期状態バッジ ───────────────────────────
+    // ── ログイン画面 ─────────────────────────────
+    function LoginScreen({ onLogin }) {
+      const [email, setEmail] = useState("");
+      const [password, setPassword] = useState("");
+      const [error, setError] = useState("");
+      const [loading, setLoading] = useState(false);
+ 
+      const handleLogin = async () => {
+        if (!email.trim() || !password.trim()) { setError("メールアドレスとパスワードを入力してください。"); return; }
+        setLoading(true);
+        setError("");
+        try {
+          const { signInWithEmailAndPassword } = window._taneruAuthFns;
+          await signInWithEmailAndPassword(window._taneruAuth, email, password);
+          onLogin();
+        } catch (e) {
+          setError("メールアドレスまたはパスワードが正しくありません。");
+        }
+        setLoading(false);
+      };
+ 
+      return (
+        <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ width: "100%", maxWidth: 380 }}>
+            <div style={{ textAlign: "center", marginBottom: 32 }}>
+              <div style={{ fontSize: 36, fontWeight: "bold", color: C.green, fontStyle: "italic", letterSpacing: "0.08em" }}>Taneru</div>
+              <div style={{ fontSize: 11, color: C.inkLight, letterSpacing: "0.2em", textTransform: "uppercase", marginTop: 4 }}>気づきから研究へ</div>
+              <div style={{ fontSize: 32, marginTop: 16, opacity: 0.3 }}>🌱</div>
+            </div>
+ 
+            <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "24px 24px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+              <div style={{ fontSize: 15, fontWeight: "bold", color: C.ink, marginBottom: 20, textAlign: "center" }}>ログイン</div>
+ 
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>メールアドレス</div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="example@email.com"
+                  style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }}
+                />
+              </div>
+ 
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>パスワード</div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="パスワード"
+                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }}
+                />
+              </div>
+ 
+              {error && (
+                <div style={{ background: C.terra + "22", border: `1px solid ${C.terra}44`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: C.terra, marginBottom: 14 }}>
+                  {error}
+                </div>
+              )}
+ 
+              <button
+                onClick={handleLogin}
+                disabled={loading}
+                style={{ width: "100%", background: loading ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif", fontStyle: "italic" }}
+              >
+                {loading ? "ログイン中..." : "ログイン 🌱"}
+              </button>
+            </div>
+ 
+            <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: C.inkLight }}>
+              アカウントは管理者が発行します
+            </div>
+          </div>
+        </div>
+      );
+    }
+ 
+    // ── 同期バッジ ───────────────────────────────
     function SyncBadge({ synced }) {
       return (
         <div style={{ fontSize: 10, color: synced ? C.greenLight : C.gold, letterSpacing: "0.08em" }}>
@@ -156,23 +219,13 @@
  
       useEffect(() => {
         const load = async () => {
-          if (window._taneruDBReady) {
-            try {
-              const data = await fsGetEntries();
-              setEntries(data);
-              setSynced(true);
-            } catch(e) {
-              setEntries(loadEntriesLocal());
-            }
-          } else {
+          try {
+            const data = await fsGetEntries();
+            setEntries(data);
+            saveEntriesLocal(data);
+            setSynced(true);
+          } catch(e) {
             setEntries(loadEntriesLocal());
-            window.addEventListener("taneruDBReady", async () => {
-              try {
-                const data = await fsGetEntries();
-                setEntries(data);
-                setSynced(true);
-              } catch(e) {}
-            }, { once: true });
           }
           setLoading(false);
         };
@@ -181,7 +234,7 @@
  
       const toggleTag = (t) => setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
  
-      const handlePromote = async (entry) => {
+      const handlePromote = (entry) => {
         const tab = window.confirm("実地研究Ⅱに追加しますか？\nOK → 実地研究Ⅱ\nキャンセル → 課題研究Ⅱ") ? 0 : 1;
         const promoted = JSON.parse(localStorage.getItem("taneru_promoted") || "[]");
         const already = promoted.find(p => p.id === entry.id && p.tab === tab);
@@ -273,7 +326,6 @@
               {saved ? "保存しました！✓" : "この気づきを記録する 🌱"}
             </button>
           </div>
- 
           {loading ? (
             <div style={{ textAlign: "center", padding: "20px", color: C.inkLight, fontSize: 13 }}>読み込み中...</div>
           ) : entries.length > 0 ? (
@@ -320,22 +372,10 @@
  
       useEffect(() => {
         const load = async () => {
-          try {
-            const data = await fsGetEntries();
-            setEntries(data);
-          } catch(e) {
-            setEntries(loadEntriesLocal());
-          }
-          try {
-            const logs = await fsGetAILogs();
-            setAiLogs(logs);
-          } catch(e) {
-            const local = localStorage.getItem("taneru_ai_logs");
-            if (local) setAiLogs(JSON.parse(local));
-          }
+          try { const data = await fsGetEntries(); setEntries(data); } catch(e) { setEntries(loadEntriesLocal()); }
+          try { const logs = await fsGetAILogs(); setAiLogs(logs); } catch(e) {}
         };
-        if (window._taneruDBReady) load();
-        else window.addEventListener("taneruDBReady", load, { once: true });
+        load();
       }, []);
  
       const days = ["月", "火", "水", "木", "金", "土", "日"];
@@ -375,7 +415,6 @@
               <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.inkLight }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold }} />AI提案あり</div>
             </div>
           </div>
- 
           {selectedDay && (
             <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
               <div style={{ fontSize: 13, fontWeight: "bold", color: C.ink, marginBottom: 12 }}>{new Date().getMonth() + 1}月{selectedDay}日の記録</div>
@@ -404,7 +443,6 @@
               )}
             </div>
           )}
- 
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📊 実習の進捗</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
@@ -462,13 +500,11 @@
         localStorage.setItem("taneru_rq", JSON.stringify({ text: rqText, status: rqStatus }));
         alert("保存しました！");
       };
- 
       const toggleStatus = () => {
         const updated = [...rqStatus];
         updated[tab] = updated[tab] === "仮" ? "確定" : "仮";
         setRqStatus(updated);
       };
- 
       const handleAddLit = () => {
         if (!litTitle.trim() && !litNote.trim()) return;
         const newLit = { id: Date.now(), title: litTitle.trim(), note: litNote.trim(), tab };
@@ -477,21 +513,18 @@
         localStorage.setItem("taneru_literatures", JSON.stringify(updated));
         setLitTitle(""); setLitNote("");
       };
- 
       const handleDeleteLit = (id) => {
         if (!window.confirm("この文献メモを削除しますか？")) return;
         const updated = literatures.filter(l => l.id !== id);
         setLiteratures(updated);
         localStorage.setItem("taneru_literatures", JSON.stringify(updated));
       };
- 
       const handleDeletePromoted = (id) => {
         if (!window.confirm("この気づきを研究ノートから外しますか？")) return;
         const updated = promoted.filter(p => p.id !== id);
         setPromoted(updated);
         localStorage.setItem("taneru_promoted", JSON.stringify(updated));
       };
- 
       const handleAIRQ = async () => {
         const entries = loadEntriesLocal();
         if (entries.length === 0) { alert("まず日記を記録してください。"); return; }
@@ -506,7 +539,6 @@
         }
         setAiLoading("");
       };
- 
       const handleAIKeywords = async () => {
         const entries = loadEntriesLocal();
         const pro = promoted.filter(p => p.tab === tab);
@@ -522,7 +554,6 @@
         }
         setAiLoading("");
       };
- 
       const handleAILiterature = async () => {
         const pro = promoted.filter(p => p.tab === tab);
         const entries = loadEntriesLocal();
@@ -629,14 +660,21 @@
     }
  
     // ── 設定画面 ─────────────────────────────────
-    function SettingsScreen() {
+    function SettingsScreen({ onLogout }) {
       const [exportStart, setExportStart] = useState("");
       const [exportEnd, setExportEnd] = useState("");
  
+      const handleLogout = async () => {
+        if (!window.confirm("ログアウトしますか？")) return;
+        const { signOut } = window._taneruAuthFns;
+        await signOut(window._taneruAuth);
+        onLogout();
+      };
+ 
       const handleClear = () => {
-        if (!window.confirm("すべての記録を削除しますか？この操作は元に戻せません。")) return;
+        if (!window.confirm("ローカルキャッシュを削除しますか？")) return;
         ["taneru_entries","taneru_rq","taneru_literatures","taneru_promoted","taneru_ai_logs","taneru_ai_rq_result","taneru_ai_keywords_result","taneru_ai_literature_result"].forEach(k => localStorage.removeItem(k));
-        alert("ローカルの記録を削除しました。Firebaseのデータは残っています。");
+        alert("削除しました。");
       };
  
       const downloadText = (filename, content) => {
@@ -730,9 +768,9 @@
           <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>実習情報・アプリの設定</div>
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🤖 API設定</div>
-            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>AnthropicのAPIキーを入力してください。AI機能が使えるようになります。</div>
+            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>AnthropicのAPIキーを入力してください。</div>
             <input type="password" defaultValue={localStorage.getItem("taneru_api_key") || ""} onChange={(e) => localStorage.setItem("taneru_api_key", e.target.value)} placeholder="sk-ant-api03-..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none", marginBottom: 8 }} />
-            <div style={{ fontSize: 11, color: C.inkLight, lineHeight: 1.6 }}>※APIキーはこのMacのブラウザにのみ保存されます。</div>
+            <div style={{ fontSize: 11, color: C.inkLight }}>※APIキーはこのブラウザにのみ保存されます。</div>
           </div>
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 14 }}>💾 エクスポート</div>
@@ -751,15 +789,13 @@
             </div>
           </div>
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>☁️ クラウド同期</div>
-            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7 }}>日記の記録はFirebase（クラウド）に自動保存されます。MacでもiPhoneでも同じデータにアクセスできます。</div>
-          </div>
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🗄 データ管理</div>
-            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>ローカルのキャッシュデータを削除します。Firebaseのデータは残ります。</div>
-            <button onClick={handleClear} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>ローカルキャッシュを削除する</button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <button onClick={handleClear} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>ローカルキャッシュを削除する</button>
+              <button onClick={handleLogout} style={{ background: C.terra, color: "#fff", border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>ログアウト</button>
+            </div>
           </div>
-          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.2 — 気づきから研究へ 🌱</div>
+          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.3 — 気づきから研究へ 🌱</div>
         </div>
       );
     }
@@ -775,10 +811,38 @@
  
     function App() {
       const [screen, setScreen] = useState("home");
+      const [user, setUser] = useState(null);
+      const [authChecked, setAuthChecked] = useState(false);
+ 
+      useEffect(() => {
+        const check = () => {
+          const { onAuthStateChanged } = window._taneruAuthFns;
+          onAuthStateChanged(window._taneruAuth, (u) => {
+            setUser(u);
+            setAuthChecked(true);
+          });
+        };
+        if (window._taneruDBReady) check();
+        else window.addEventListener("taneruDBReady", check, { once: true });
+      }, []);
+ 
+      if (!authChecked) {
+        return (
+          <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ fontSize: 36, opacity: 0.3 }}>🌱</div>
+          </div>
+        );
+      }
+ 
+      if (!user) {
+        return <LoginScreen onLogin={() => {}} />;
+      }
+ 
       const screens = {
         home: <HomeScreen />, calendar: <CalendarScreen />, ai: <AIScreen />,
-        research: <ResearchScreen />, settings: <SettingsScreen />,
+        research: <ResearchScreen />, settings: <SettingsScreen onLogout={() => setUser(null)} />,
       };
+ 
       return (
         <div style={{ fontFamily: "'Georgia', 'Times New Roman', serif", background: C.bg, minHeight: "100vh", maxWidth: 440, margin: "0 auto", display: "flex", flexDirection: "column", boxShadow: "0 0 40px rgba(0,0,0,0.12)" }}>
           <div style={{ background: C.green, padding: "18px 24px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", overflow: "hidden" }}>
@@ -786,7 +850,7 @@
               <div style={{ fontSize: 22, fontWeight: "bold", color: "#FAF7F2", letterSpacing: "0.08em", fontStyle: "italic" }}>Taneru</div>
               <div style={{ fontSize: 10, color: "#8FB573", letterSpacing: "0.2em", textTransform: "uppercase", marginTop: 2 }}>気づきから研究へ</div>
             </div>
-            <div style={{ fontSize: 52, opacity: 0.12, position: "absolute", right: 16, top: 4 }}>🌿</div>
+            <div style={{ fontSize: 10, color: "#8FB573", opacity: 0.8 }}>{user.email}</div>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 100px" }}>
             {screens[screen]}
