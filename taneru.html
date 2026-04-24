@@ -580,6 +580,18 @@
 
       {/* データ管理 */}
       <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
+        <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🤖 API設定</div>
+        <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>AnthropicのAPIキーを入力してください。AI機能が使えるようになります。</div>
+        <input
+          type="password"
+          defaultValue={localStorage.getItem("taneru_api_key") || ""}
+          onChange={(e) => localStorage.setItem("taneru_api_key", e.target.value)}
+          placeholder="sk-ant-api03-..."
+          style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none", marginBottom: 8 }}
+        />
+        <div style={{ fontSize: 11, color: C.inkLight, lineHeight: 1.6 }}>※APIキーはこのMacのブラウザにのみ保存されます。外部に送信されることはありません。</div>
+      </div>
         <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🗄 データ管理</div>
         <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>記録はこのMacのブラウザに保存されています。</div>
         <button onClick={handleClear} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>すべての記録を削除する</button>
