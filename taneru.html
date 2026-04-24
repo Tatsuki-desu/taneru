@@ -377,28 +377,218 @@
     </div>
   );
 }
-    function SettingsScreen() {
-      const handleClear = () => {
-        if (window.confirm("すべての記録を削除しますか？この操作は元に戻せません。")) {
-          localStorage.removeItem("taneru_entries");
-          alert("記録を削除しました。");
-        }
-      };
-      return (
-        <div>
-          <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>設定</div>
-          <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>実習情報・アプリの設定</div>
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>💾 データ管理</div>
-            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>記録はこのMacのブラウザに保存されています。</div>
-            <button onClick={handleClear} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>
-              すべての記録を削除する
-            </button>
-          </div>
-          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.1 — 気づきから研究へ 🌱</div>
-        </div>
-      );
+   function SettingsScreen() {
+  const [exportStart, setExportStart] = useState("");
+  const [exportEnd, setExportEnd] = useState("");
+
+  const handleClear = () => {
+    if (!window.confirm("すべての記録を削除しますか？この操作は元に戻せません。")) return;
+    localStorage.removeItem("taneru_entries");
+    localStorage.removeItem("taneru_rq");
+    localStorage.removeItem("taneru_literatures");
+    localStorage.removeItem("taneru_promoted");
+    alert("記録を削除しました。");
+  };
+
+  // テキストファイルをダウンロードする共通関数
+  const downloadText = (filename, content) => {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ① 日記の記録をエクスポート
+  const exportDiary = () => {
+    const entries = loadEntries();
+    const start = exportStart ? new Date(exportStart + "T00:00:00") : null;
+    const end = exportEnd ? new Date(exportEnd + "T23:59:59") : null;
+
+    const filtered = entries.filter(e => {
+      const d = new Date(e.dateTime);
+      if (start && d < start) return false;
+      if (end && d > end) return false;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      alert("指定した期間に記録がありません。");
+      return;
     }
+
+    const dateLabel = exportStart || exportEnd
+      ? `${exportStart || "最初"} 〜 ${exportEnd || "最新"}`
+      : "全期間";
+
+    let text = "===========================\n";
+    text += "Taneru｜日記の記録\n";
+    text += `出力日：${new Date().toLocaleDateString("ja-JP")}\n`;
+    text += `期間：${dateLabel}\n`;
+    text += "===========================\n\n";
+
+    filtered.forEach(e => {
+      text += `■ ${e.date}\n`;
+      if (e.event)    text += `【出来事・観察】\n${e.event}\n\n`;
+      if (e.question) text += `【疑問・気づき】\n${e.question}\n\n`;
+      if (e.feedback) text += `【指導教員のフィードバック】\n${e.feedback}\n\n`;
+      if (e.tags && e.tags.length > 0) text += `【タグ】${e.tags.join("　")}\n`;
+      text += "---------------------------\n\n";
+    });
+
+    downloadText(`taneru_diary_${exportStart || "all"}.txt`, text);
+  };
+
+  // ② 研究ノートをエクスポート
+  const exportResearch = () => {
+    const rq = JSON.parse(localStorage.getItem("taneru_rq") || '{"text":["",""],"status":["仮","仮"]}');
+    const promoted = JSON.parse(localStorage.getItem("taneru_promoted") || "[]");
+    const literatures = JSON.parse(localStorage.getItem("taneru_literatures") || "[]");
+    const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
+
+    let text = "===========================\n";
+    text += "Taneru｜研究ノート\n";
+    text += `出力日：${new Date().toLocaleDateString("ja-JP")}\n`;
+    text += "===========================\n\n";
+
+    tabLabels.forEach((label, i) => {
+      text += `\n========== ${label} ==========\n\n`;
+
+      text += `■ リサーチクエスチョン（${rq.status[i]}）\n`;
+      text += rq.text[i] ? `${rq.text[i]}\n\n` : "（未入力）\n\n";
+
+      const pro = promoted.filter(p => p.tab === i);
+      text += `■ 昇格した気づき（${pro.length}件）\n`;
+      if (pro.length > 0) {
+        pro.forEach(p => {
+          text += `\n${p.date}\n`;
+          if (p.event)    text += `・${p.event}\n`;
+          if (p.question) text += `💡 ${p.question}\n`;
+        });
+      } else {
+        text += "（なし）\n";
+      }
+
+      const lits = literatures.filter(l => l.tab === i);
+      text += `\n■ 文献メモ（${lits.length}件）\n`;
+      if (lits.length > 0) {
+        lits.forEach(l => {
+          text += `\n【${l.title}】\n`;
+          if (l.note) text += `${l.note}\n`;
+        });
+      } else {
+        text += "（なし）\n";
+      }
+
+      text += "\n";
+    });
+
+    downloadText("taneru_research.txt", text);
+  };
+
+  // ③ 全体レポートをエクスポート
+  const exportAll = () => {
+    const entries = loadEntries();
+    const start = exportStart ? new Date(exportStart + "T00:00:00") : null;
+    const end = exportEnd ? new Date(exportEnd + "T23:59:59") : null;
+
+    const filtered = entries.filter(e => {
+      const d = new Date(e.dateTime);
+      if (start && d < start) return false;
+      if (end && d > end) return false;
+      return true;
+    });
+
+    const rq = JSON.parse(localStorage.getItem("taneru_rq") || '{"text":["",""],"status":["仮","仮"]}');
+    const promoted = JSON.parse(localStorage.getItem("taneru_promoted") || "[]");
+    const literatures = JSON.parse(localStorage.getItem("taneru_literatures") || "[]");
+    const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
+    const dateLabel = exportStart || exportEnd
+      ? `${exportStart || "最初"} 〜 ${exportEnd || "最新"}`
+      : "全期間";
+
+    let text = "===========================\n";
+    text += "Taneru｜全体レポート\n";
+    text += `出力日：${new Date().toLocaleDateString("ja-JP")}\n`;
+    text += `日記の期間：${dateLabel}\n`;
+    text += "===========================\n\n";
+
+    tabLabels.forEach((label, i) => {
+      text += `\n========== ${label} ==========\n\n`;
+      text += `■ リサーチクエスチョン（${rq.status[i]}）\n`;
+      text += rq.text[i] ? `${rq.text[i]}\n\n` : "（未入力）\n\n";
+
+      const pro = promoted.filter(p => p.tab === i);
+      text += `■ 昇格した気づき（${pro.length}件）\n`;
+      pro.forEach(p => {
+        text += `\n${p.date}\n`;
+        if (p.event)    text += `・${p.event}\n`;
+        if (p.question) text += `💡 ${p.question}\n`;
+      });
+
+      const lits = literatures.filter(l => l.tab === i);
+      text += `\n■ 文献メモ（${lits.length}件）\n`;
+      lits.forEach(l => {
+        text += `\n【${l.title}】\n`;
+        if (l.note) text += `${l.note}\n`;
+      });
+    });
+
+    text += "\n\n===========================\n";
+    text += `■ 日記の記録（${filtered.length}件）\n`;
+    text += "===========================\n\n";
+
+    filtered.forEach(e => {
+      text += `■ ${e.date}\n`;
+      if (e.event)    text += `【出来事・観察】\n${e.event}\n\n`;
+      if (e.question) text += `【疑問・気づき】\n${e.question}\n\n`;
+      if (e.feedback) text += `【指導教員のフィードバック】\n${e.feedback}\n\n`;
+      if (e.tags && e.tags.length > 0) text += `【タグ】${e.tags.join("　")}\n`;
+      text += "---------------------------\n\n";
+    });
+
+    downloadText(`taneru_report_${exportStart || "all"}.txt`, text);
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>設定</div>
+      <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>実習情報・アプリの設定</div>
+
+      {/* エクスポート */}
+      <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 14 }}>💾 エクスポート</div>
+
+        {/* 日付範囲選択 */}
+        <div style={{ background: C.bg, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+          <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 8 }}>①③の日付範囲（省略すると全期間）</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input type="date" value={exportStart} onChange={(e) => setExportStart(e.target.value)} style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "'Georgia', serif", background: C.cream, color: C.ink, outline: "none" }} />
+            <span style={{ fontSize: 12, color: C.inkLight }}>〜</span>
+            <input type="date" value={exportEnd} onChange={(e) => setExportEnd(e.target.value)} style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "'Georgia', serif", background: C.cream, color: C.ink, outline: "none" }} />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={exportDiary} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>① 日記の記録をエクスポート</button>
+          <button onClick={exportResearch} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>② 研究ノートをエクスポート</button>
+          <button onClick={exportAll} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>③ 全体レポートをエクスポート</button>
+        </div>
+      </div>
+
+      {/* データ管理 */}
+      <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🗄 データ管理</div>
+        <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>記録はこのMacのブラウザに保存されています。</div>
+        <button onClick={handleClear} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>すべての記録を削除する</button>
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.1 — 気づきから研究へ 🌱</div>
+    </div>
+  );
+}
     const NAV = [
       { id: "home", icon: "✏️", label: "記録" },
       { id: "calendar", icon: "📅", label: "カレンダー" },
