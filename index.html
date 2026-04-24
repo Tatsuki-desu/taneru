@@ -17,7 +17,6 @@
 <body>
   <div id="root"></div>
  
-  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
@@ -52,33 +51,57 @@
       ink: "#1C1C1A", inkLight: "#6B6860", gold: "#D4A843",
     };
  
-    // ── Firestore操作 ────────────────────────────
+    // ── ユーザーIDを取得 ─────────────────────────
+    function getUID() {
+      return window._taneruAuth?.currentUser?.uid || null;
+    }
+ 
+    // ── Firestore操作（ユーザーごとに分離）───────
     function getDB() { return window._taneruDB; }
     function getFS() { return window._taneruFirestore; }
  
+    // users/{uid}/entries
     async function fsAddEntry(entry) {
+      const uid = getUID(); if (!uid) return;
       const { collection, addDoc } = getFS();
-      await addDoc(collection(getDB(), "entries"), entry);
+      await addDoc(collection(getDB(), "users", uid, "entries"), entry);
     }
     async function fsDeleteEntry(id) {
+      const uid = getUID(); if (!uid) return;
       const { doc, deleteDoc } = getFS();
-      await deleteDoc(doc(getDB(), "entries", id));
+      await deleteDoc(doc(getDB(), "users", uid, "entries", id));
     }
     async function fsGetEntries() {
+      const uid = getUID(); if (!uid) return [];
       const { collection, getDocs, query, orderBy } = getFS();
-      const q = query(collection(getDB(), "entries"), orderBy("dateTime", "desc"));
+      const q = query(collection(getDB(), "users", uid, "entries"), orderBy("dateTime", "desc"));
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ ...d.data(), id: d.id }));
     }
     async function fsAddAILog(log) {
+      const uid = getUID(); if (!uid) return;
       const { collection, addDoc } = getFS();
-      await addDoc(collection(getDB(), "ai_logs"), log);
+      await addDoc(collection(getDB(), "users", uid, "ai_logs"), log);
     }
     async function fsGetAILogs() {
+      const uid = getUID(); if (!uid) return [];
       const { collection, getDocs, query, orderBy } = getFS();
-      const q = query(collection(getDB(), "ai_logs"), orderBy("dateTime", "desc"));
+      const q = query(collection(getDB(), "users", uid, "ai_logs"), orderBy("dateTime", "desc"));
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    }
+ 
+    // ── ローカルキャッシュ（ユーザーごと）───────
+    function localKey(key) {
+      const uid = getUID();
+      return uid ? `taneru_${uid}_${key}` : `taneru_${key}`;
+    }
+    function loadEntriesLocal() {
+      const data = localStorage.getItem(localKey("entries"));
+      return data ? JSON.parse(data) : [];
+    }
+    function saveEntriesLocal(entries) {
+      localStorage.setItem(localKey("entries"), JSON.stringify(entries));
     }
  
     // ── AI呼び出し ───────────────────────────────
@@ -106,16 +129,8 @@
       } catch (e) { alert("通信エラーが発生しました。"); return null; }
     }
  
-    function loadEntriesLocal() {
-      const data = localStorage.getItem("taneru_entries");
-      return data ? JSON.parse(data) : [];
-    }
-    function saveEntriesLocal(entries) {
-      localStorage.setItem("taneru_entries", JSON.stringify(entries));
-    }
- 
     // ── ログイン画面 ─────────────────────────────
-    function LoginScreen({ onLogin }) {
+    function LoginScreen() {
       const [email, setEmail] = useState("");
       const [password, setPassword] = useState("");
       const [error, setError] = useState("");
@@ -123,12 +138,10 @@
  
       const handleLogin = async () => {
         if (!email.trim() || !password.trim()) { setError("メールアドレスとパスワードを入力してください。"); return; }
-        setLoading(true);
-        setError("");
+        setLoading(true); setError("");
         try {
           const { signInWithEmailAndPassword } = window._taneruAuthFns;
           await signInWithEmailAndPassword(window._taneruAuth, email, password);
-          onLogin();
         } catch (e) {
           setError("メールアドレスまたはパスワードが正しくありません。");
         }
@@ -143,63 +156,29 @@
               <div style={{ fontSize: 11, color: C.inkLight, letterSpacing: "0.2em", textTransform: "uppercase", marginTop: 4 }}>気づきから研究へ</div>
               <div style={{ fontSize: 32, marginTop: 16, opacity: 0.3 }}>🌱</div>
             </div>
- 
-            <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "24px 24px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+            <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "24px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
               <div style={{ fontSize: 15, fontWeight: "bold", color: C.ink, marginBottom: 20, textAlign: "center" }}>ログイン</div>
- 
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>メールアドレス</div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="example@email.com"
-                  style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }}
-                />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
               </div>
- 
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>パスワード</div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="パスワード"
-                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                  style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }}
-                />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="パスワード" onKeyDown={(e) => e.key === "Enter" && handleLogin()} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
               </div>
- 
-              {error && (
-                <div style={{ background: C.terra + "22", border: `1px solid ${C.terra}44`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: C.terra, marginBottom: 14 }}>
-                  {error}
-                </div>
-              )}
- 
-              <button
-                onClick={handleLogin}
-                disabled={loading}
-                style={{ width: "100%", background: loading ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif", fontStyle: "italic" }}
-              >
+              {error && <div style={{ background: C.terra + "22", border: `1px solid ${C.terra}44`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: C.terra, marginBottom: 14 }}>{error}</div>}
+              <button onClick={handleLogin} disabled={loading} style={{ width: "100%", background: loading ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif", fontStyle: "italic" }}>
                 {loading ? "ログイン中..." : "ログイン 🌱"}
               </button>
             </div>
- 
-            <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: C.inkLight }}>
-              アカウントは管理者が発行します
-            </div>
+            <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: C.inkLight }}>アカウントは管理者が発行します</div>
           </div>
         </div>
       );
     }
  
-    // ── 同期バッジ ───────────────────────────────
     function SyncBadge({ synced }) {
-      return (
-        <div style={{ fontSize: 10, color: synced ? C.greenLight : C.gold, letterSpacing: "0.08em" }}>
-          {synced ? "☁️ クラウド同期済" : "⏳ 同期中..."}
-        </div>
-      );
+      return <div style={{ fontSize: 10, color: synced ? C.greenLight : C.gold, letterSpacing: "0.08em" }}>{synced ? "☁️ クラウド同期済" : "⏳ 同期中..."}</div>;
     }
  
     // ── ホーム画面 ───────────────────────────────
@@ -221,12 +200,8 @@
         const load = async () => {
           try {
             const data = await fsGetEntries();
-            setEntries(data);
-            saveEntriesLocal(data);
-            setSynced(true);
-          } catch(e) {
-            setEntries(loadEntriesLocal());
-          }
+            setEntries(data); saveEntriesLocal(data); setSynced(true);
+          } catch(e) { setEntries(loadEntriesLocal()); }
           setLoading(false);
         };
         load();
@@ -236,11 +211,11 @@
  
       const handlePromote = (entry) => {
         const tab = window.confirm("実地研究Ⅱに追加しますか？\nOK → 実地研究Ⅱ\nキャンセル → 課題研究Ⅱ") ? 0 : 1;
-        const promoted = JSON.parse(localStorage.getItem("taneru_promoted") || "[]");
+        const key = localKey("promoted");
+        const promoted = JSON.parse(localStorage.getItem(key) || "[]");
         const already = promoted.find(p => p.id === entry.id && p.tab === tab);
         if (already) { alert("すでに追加済みです。"); return; }
-        const updated = [{ ...entry, tab }, ...promoted];
-        localStorage.setItem("taneru_promoted", JSON.stringify(updated));
+        localStorage.setItem(key, JSON.stringify([{ ...entry, tab }, ...promoted]));
         alert("研究ノートに追加しました！");
       };
  
@@ -249,12 +224,10 @@
         try {
           await fsDeleteEntry(id);
           const updated = entries.filter(e => e.id !== id);
-          setEntries(updated);
-          saveEntriesLocal(updated);
+          setEntries(updated); saveEntriesLocal(updated);
         } catch(e) {
           const updated = loadEntriesLocal().filter(e => e.id !== id);
-          saveEntriesLocal(updated);
-          setEntries(updated);
+          saveEntriesLocal(updated); setEntries(updated);
         }
       };
  
@@ -269,14 +242,11 @@
         try {
           await fsAddEntry(newEntry);
           const data = await fsGetEntries();
-          setEntries(data);
-          saveEntriesLocal(data);
-          setSynced(true);
+          setEntries(data); saveEntriesLocal(data); setSynced(true);
         } catch(e) {
           const withId = { ...newEntry, id: Date.now().toString() };
           const updated = [withId, ...loadEntriesLocal()];
-          saveEntriesLocal(updated);
-          setEntries(updated);
+          saveEntriesLocal(updated); setEntries(updated);
         }
         setEvent(""); setQuestion(""); setTags([]); setFeedback("");
         setTimeout(() => setSaved(false), 2000);
@@ -483,21 +453,21 @@
       const [literatures, setLiteratures] = useState([]);
       const [promoted, setPromoted] = useState([]);
       const [aiLoading, setAiLoading] = useState("");
-      const [aiRQResult, setAiRQResult] = useState(localStorage.getItem("taneru_ai_rq_result") || "");
-      const [aiKeywords, setAiKeywords] = useState(localStorage.getItem("taneru_ai_keywords_result") || "");
-      const [aiLiterature, setAiLiterature] = useState(localStorage.getItem("taneru_ai_literature_result") || "");
+      const [aiRQResult, setAiRQResult] = useState(localStorage.getItem(localKey("ai_rq")) || "");
+      const [aiKeywords, setAiKeywords] = useState(localStorage.getItem(localKey("ai_keywords")) || "");
+      const [aiLiterature, setAiLiterature] = useState(localStorage.getItem(localKey("ai_literature")) || "");
  
       useEffect(() => {
-        const rq = localStorage.getItem("taneru_rq");
+        const rq = localStorage.getItem(localKey("rq"));
         if (rq) { const p = JSON.parse(rq); setRqText(p.text||["",""]); setRqStatus(p.status||["仮","仮"]); }
-        const lit = localStorage.getItem("taneru_literatures");
+        const lit = localStorage.getItem(localKey("literatures"));
         if (lit) setLiteratures(JSON.parse(lit));
-        const pro = localStorage.getItem("taneru_promoted");
+        const pro = localStorage.getItem(localKey("promoted"));
         if (pro) setPromoted(JSON.parse(pro));
       }, []);
  
       const saveRQ = () => {
-        localStorage.setItem("taneru_rq", JSON.stringify({ text: rqText, status: rqStatus }));
+        localStorage.setItem(localKey("rq"), JSON.stringify({ text: rqText, status: rqStatus }));
         alert("保存しました！");
       };
       const toggleStatus = () => {
@@ -510,20 +480,20 @@
         const newLit = { id: Date.now(), title: litTitle.trim(), note: litNote.trim(), tab };
         const updated = [newLit, ...literatures];
         setLiteratures(updated);
-        localStorage.setItem("taneru_literatures", JSON.stringify(updated));
+        localStorage.setItem(localKey("literatures"), JSON.stringify(updated));
         setLitTitle(""); setLitNote("");
       };
       const handleDeleteLit = (id) => {
         if (!window.confirm("この文献メモを削除しますか？")) return;
         const updated = literatures.filter(l => l.id !== id);
         setLiteratures(updated);
-        localStorage.setItem("taneru_literatures", JSON.stringify(updated));
+        localStorage.setItem(localKey("literatures"), JSON.stringify(updated));
       };
       const handleDeletePromoted = (id) => {
         if (!window.confirm("この気づきを研究ノートから外しますか？")) return;
         const updated = promoted.filter(p => p.id !== id);
         setPromoted(updated);
-        localStorage.setItem("taneru_promoted", JSON.stringify(updated));
+        localStorage.setItem(localKey("promoted"), JSON.stringify(updated));
       };
       const handleAIRQ = async () => {
         const entries = loadEntriesLocal();
@@ -534,7 +504,7 @@
         const result = await callAI(prompt);
         if (result) {
           setAiRQResult(result);
-          localStorage.setItem("taneru_ai_rq_result", result);
+          localStorage.setItem(localKey("ai_rq"), result);
           try { await fsAddAILog({ type: "rq", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {}
         }
         setAiLoading("");
@@ -545,11 +515,11 @@
         if (entries.length === 0 && pro.length === 0) { alert("まず日記を記録してください。"); return; }
         setAiLoading("keywords");
         const entriesText = pro.length > 0 ? pro.map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n") : entries.slice(0, 10).map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n");
-        const prompt = `あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。この内容をもとに、CiNiiやGoogle Scholarで文献検索するときに使える検索キーワードを5つ提案してください。日本語と英語を混ぜても構いません。\n\n【気づきの記録】\n${entriesText}\n\n【出力形式】\n①〜\n②〜\n③〜\n④〜\n⑤〜`;
+        const prompt = `あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。この内容をもとに、CiNiiやGoogle Scholarで文献検索するときに使える検索キーワードを5つ提案してください。\n\n【気づきの記録】\n${entriesText}\n\n【出力形式】\n①〜\n②〜\n③〜\n④〜\n⑤〜`;
         const result = await callAI(prompt);
         if (result) {
           setAiKeywords(result);
-          localStorage.setItem("taneru_ai_keywords_result", result);
+          localStorage.setItem(localKey("ai_keywords"), result);
           try { await fsAddAILog({ type: "keywords", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {}
         }
         setAiLoading("");
@@ -564,7 +534,7 @@
         const result = await callAI(prompt);
         if (result) {
           setAiLiterature(result);
-          localStorage.setItem("taneru_ai_literature_result", result);
+          localStorage.setItem(localKey("ai_literature"), result);
           try { await fsAddAILog({ type: "literature", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {}
         }
         setAiLoading("");
@@ -597,7 +567,7 @@
               <div style={{ background: C.bg, borderRadius: 12, padding: "14px", marginTop: 12, fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
                 <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>🤖 AIからの提案</div>
                 {aiRQResult}
-                <button onClick={() => { setAiRQResult(""); localStorage.removeItem("taneru_ai_rq_result"); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
+                <button onClick={() => { setAiRQResult(""); localStorage.removeItem(localKey("ai_rq")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
               </div>
             )}
           </div>
@@ -641,7 +611,7 @@
                 <div style={{ background: C.bg, borderRadius: 12, padding: "14px", fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
                   <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>🔍 おすすめ検索キーワード</div>
                   {aiKeywords}
-                  <button onClick={() => { setAiKeywords(""); localStorage.removeItem("taneru_ai_keywords_result"); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
+                  <button onClick={() => { setAiKeywords(""); localStorage.removeItem(localKey("ai_keywords")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
                 </div>
               )}
               <button onClick={handleAILiterature} disabled={aiLoading === "literature"} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "literature" ? "検索中..." : "📚 関連文献を探す"}</button>
@@ -650,7 +620,7 @@
                   <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>📚 関連文献の候補</div>
                   <div style={{ fontSize: 11, color: C.terra, marginBottom: 8 }}>⚠️ 必ずCiNiiやGoogle Scholarで実在を確認してください</div>
                   {aiLiterature}
-                  <button onClick={() => { setAiLiterature(""); localStorage.removeItem("taneru_ai_literature_result"); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
+                  <button onClick={() => { setAiLiterature(""); localStorage.removeItem(localKey("ai_literature")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
                 </div>
               )}
             </div>
@@ -660,7 +630,7 @@
     }
  
     // ── 設定画面 ─────────────────────────────────
-    function SettingsScreen({ onLogout }) {
+    function SettingsScreen({ onLogout, userEmail }) {
       const [exportStart, setExportStart] = useState("");
       const [exportEnd, setExportEnd] = useState("");
  
@@ -673,7 +643,7 @@
  
       const handleClear = () => {
         if (!window.confirm("ローカルキャッシュを削除しますか？")) return;
-        ["taneru_entries","taneru_rq","taneru_literatures","taneru_promoted","taneru_ai_logs","taneru_ai_rq_result","taneru_ai_keywords_result","taneru_ai_literature_result"].forEach(k => localStorage.removeItem(k));
+        ["entries","rq","literatures","promoted","ai_logs","ai_rq","ai_keywords","ai_literature"].forEach(k => localStorage.removeItem(localKey(k)));
         alert("削除しました。");
       };
  
@@ -707,9 +677,9 @@
       };
  
       const exportResearch = () => {
-        const rq = JSON.parse(localStorage.getItem("taneru_rq") || '{"text":["",""],"status":["仮","仮"]}');
-        const promoted = JSON.parse(localStorage.getItem("taneru_promoted") || "[]");
-        const literatures = JSON.parse(localStorage.getItem("taneru_literatures") || "[]");
+        const rq = JSON.parse(localStorage.getItem(localKey("rq")) || '{"text":["",""],"status":["仮","仮"]}');
+        const promoted = JSON.parse(localStorage.getItem(localKey("promoted")) || "[]");
+        const literatures = JSON.parse(localStorage.getItem(localKey("literatures")) || "[]");
         const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
         let text = "===========================\nTaneru｜研究ノート\n";
         text += `出力日：${new Date().toLocaleDateString("ja-JP")}\n===========================\n\n`;
@@ -732,9 +702,9 @@
         const start = exportStart ? new Date(exportStart + "T00:00:00") : null;
         const end = exportEnd ? new Date(exportEnd + "T23:59:59") : null;
         const filtered = entries.filter(e => { const d = new Date(e.dateTime); if (start && d < start) return false; if (end && d > end) return false; return true; });
-        const rq = JSON.parse(localStorage.getItem("taneru_rq") || '{"text":["",""],"status":["仮","仮"]}');
-        const promoted = JSON.parse(localStorage.getItem("taneru_promoted") || "[]");
-        const literatures = JSON.parse(localStorage.getItem("taneru_literatures") || "[]");
+        const rq = JSON.parse(localStorage.getItem(localKey("rq")) || '{"text":["",""],"status":["仮","仮"]}');
+        const promoted = JSON.parse(localStorage.getItem(localKey("promoted")) || "[]");
+        const literatures = JSON.parse(localStorage.getItem(localKey("literatures")) || "[]");
         const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
         const dateLabel = exportStart || exportEnd ? `${exportStart || "最初"} 〜 ${exportEnd || "最新"}` : "全期間";
         let text = "===========================\nTaneru｜全体レポート\n";
@@ -767,6 +737,10 @@
           <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>設定</div>
           <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>実習情報・アプリの設定</div>
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>👤 ログイン中</div>
+            <div style={{ fontSize: 13, color: C.ink }}>{userEmail}</div>
+          </div>
+          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🤖 API設定</div>
             <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>AnthropicのAPIキーを入力してください。</div>
             <input type="password" defaultValue={localStorage.getItem("taneru_api_key") || ""} onChange={(e) => localStorage.setItem("taneru_api_key", e.target.value)} placeholder="sk-ant-api03-..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none", marginBottom: 8 }} />
@@ -795,7 +769,7 @@
               <button onClick={handleLogout} style={{ background: C.terra, color: "#fff", border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>ログアウト</button>
             </div>
           </div>
-          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.3 — 気づきから研究へ 🌱</div>
+          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.4 — 気づきから研究へ 🌱</div>
         </div>
       );
     }
@@ -834,13 +808,12 @@
         );
       }
  
-      if (!user) {
-        return <LoginScreen onLogin={() => {}} />;
-      }
+      if (!user) return <LoginScreen />;
  
       const screens = {
         home: <HomeScreen />, calendar: <CalendarScreen />, ai: <AIScreen />,
-        research: <ResearchScreen />, settings: <SettingsScreen onLogout={() => setUser(null)} />,
+        research: <ResearchScreen />,
+        settings: <SettingsScreen onLogout={() => setUser(null)} userEmail={user.email} />,
       };
  
       return (
@@ -850,7 +823,7 @@
               <div style={{ fontSize: 22, fontWeight: "bold", color: "#FAF7F2", letterSpacing: "0.08em", fontStyle: "italic" }}>Taneru</div>
               <div style={{ fontSize: 10, color: "#8FB573", letterSpacing: "0.2em", textTransform: "uppercase", marginTop: 2 }}>気づきから研究へ</div>
             </div>
-            <div style={{ fontSize: 10, color: "#8FB573", opacity: 0.8 }}>{user.email}</div>
+            <div style={{ fontSize: 10, color: "#8FB573", opacity: 0.8, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</div>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 100px" }}>
             {screens[screen]}
