@@ -16,12 +16,10 @@
 </head>
 <body>
   <div id="root"></div>
- 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
- 
     const firebaseConfig = {
       apiKey: "AIzaSyC44xqcJ3rs2aBqJLslaz51dj46Sck45Pw",
       authDomain: "taneru-53d46.firebaseapp.com",
@@ -30,11 +28,9 @@
       messagingSenderId: "835922049",
       appId: "1:835922049:web:3df61514828833f930c580"
     };
- 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
- 
     window._taneruDB = db;
     window._taneruAuth = auth;
     window._taneruFirestore = { collection, addDoc, getDocs, deleteDoc, doc, setDoc, query, orderBy };
@@ -42,7 +38,6 @@
     window._taneruDBReady = true;
     window.dispatchEvent(new Event("taneruDBReady"));
   </script>
- 
   <script type="text/babel">
     const { useState, useEffect } = React;
     const C = {
@@ -51,16 +46,12 @@
       ink: "#1C1C1A", inkLight: "#6B6860", gold: "#D4A843",
     };
  
-    // ── ユーザーIDを取得 ─────────────────────────
-    function getUID() {
-      return window._taneruAuth?.currentUser?.uid || null;
-    }
- 
-    // ── Firestore操作（ユーザーごとに分離）───────
+    function getUID() { return window._taneruAuth?.currentUser?.uid || null; }
+    function getEmail() { return window._taneruAuth?.currentUser?.email || ""; }
     function getDB() { return window._taneruDB; }
     function getFS() { return window._taneruFirestore; }
  
-    // users/{uid}/entries
+    // ── ユーザーごとのFirestore操作 ──────────────
     async function fsAddEntry(entry) {
       const uid = getUID(); if (!uid) return;
       const { collection, addDoc } = getFS();
@@ -91,7 +82,33 @@
       return snap.docs.map(d => ({ ...d.data(), id: d.id }));
     }
  
-    // ── ローカルキャッシュ（ユーザーごと）───────
+    // ── 掲示板のFirestore操作（全ユーザー共有）──
+    async function fsAddPost(post) {
+      const { collection, addDoc } = getFS();
+      await addDoc(collection(getDB(), "shared_posts"), post);
+    }
+    async function fsGetPosts() {
+      const { collection, getDocs, query, orderBy } = getFS();
+      const q = query(collection(getDB(), "shared_posts"), orderBy("dateTime", "desc"));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    }
+    async function fsDeletePost(id) {
+      const { doc, deleteDoc } = getFS();
+      await deleteDoc(doc(getDB(), "shared_posts", id));
+    }
+    async function fsAddComment(postId, comment) {
+      const { collection, addDoc } = getFS();
+      await addDoc(collection(getDB(), "shared_posts", postId, "comments"), comment);
+    }
+    async function fsGetComments(postId) {
+      const { collection, getDocs, query, orderBy } = getFS();
+      const q = query(collection(getDB(), "shared_posts", postId, "comments"), orderBy("dateTime", "asc"));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    }
+ 
+    // ── ローカルキャッシュ ───────────────────────
     function localKey(key) {
       const uid = getUID();
       return uid ? `taneru_${uid}_${key}` : `taneru_${key}`;
@@ -135,19 +152,15 @@
       const [password, setPassword] = useState("");
       const [error, setError] = useState("");
       const [loading, setLoading] = useState(false);
- 
       const handleLogin = async () => {
         if (!email.trim() || !password.trim()) { setError("メールアドレスとパスワードを入力してください。"); return; }
         setLoading(true); setError("");
         try {
           const { signInWithEmailAndPassword } = window._taneruAuthFns;
           await signInWithEmailAndPassword(window._taneruAuth, email, password);
-        } catch (e) {
-          setError("メールアドレスまたはパスワードが正しくありません。");
-        }
+        } catch (e) { setError("メールアドレスまたはパスワードが正しくありません。"); }
         setLoading(false);
       };
- 
       return (
         <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 380 }}>
@@ -178,7 +191,7 @@
     }
  
     function SyncBadge({ synced }) {
-      return <div style={{ fontSize: 10, color: synced ? C.greenLight : C.gold, letterSpacing: "0.08em" }}>{synced ? "☁️ クラウド同期済" : "⏳ 同期中..."}</div>;
+      return <div style={{ fontSize: 10, color: synced ? C.greenLight : C.gold }}>{synced ? "☁️ クラウド同期済" : "⏳ 同期中..."}</div>;
     }
  
     // ── ホーム画面 ───────────────────────────────
@@ -198,10 +211,8 @@
  
       useEffect(() => {
         const load = async () => {
-          try {
-            const data = await fsGetEntries();
-            setEntries(data); saveEntriesLocal(data); setSynced(true);
-          } catch(e) { setEntries(loadEntriesLocal()); }
+          try { const data = await fsGetEntries(); setEntries(data); saveEntriesLocal(data); setSynced(true); }
+          catch(e) { setEntries(loadEntriesLocal()); }
           setLoading(false);
         };
         load();
@@ -213,10 +224,25 @@
         const tab = window.confirm("実地研究Ⅱに追加しますか？\nOK → 実地研究Ⅱ\nキャンセル → 課題研究Ⅱ") ? 0 : 1;
         const key = localKey("promoted");
         const promoted = JSON.parse(localStorage.getItem(key) || "[]");
-        const already = promoted.find(p => p.id === entry.id && p.tab === tab);
-        if (already) { alert("すでに追加済みです。"); return; }
+        if (promoted.find(p => p.id === entry.id && p.tab === tab)) { alert("すでに追加済みです。"); return; }
         localStorage.setItem(key, JSON.stringify([{ ...entry, tab }, ...promoted]));
         alert("研究ノートに追加しました！");
+      };
+ 
+      const handleShare = async (entry) => {
+        if (!window.confirm("この気づきを掲示板に共有しますか？")) return;
+        try {
+          await fsAddPost({
+            uid: getUID(),
+            email: getEmail(),
+            date: entry.date,
+            dateTime: new Date().toISOString(),
+            event: entry.event || "",
+            question: entry.question || "",
+            feedback: entry.feedback || "",
+          });
+          alert("掲示板に共有しました！");
+        } catch(e) { alert("共有に失敗しました。"); }
       };
  
       const handleDelete = async (id) => {
@@ -320,7 +346,10 @@
                   {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 4 }}>{entry.event}</div>}
                   {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.7, fontStyle: "italic", marginBottom: 4 }}>💡 {entry.question}</div>}
                   {entry.feedback && <div style={{ fontSize: 13, color: C.gold, lineHeight: 1.7, fontStyle: "italic", marginBottom: 4 }}>👨‍🏫 {entry.feedback}</div>}
-                  <button onClick={() => handlePromote(entry)} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 10, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'Georgia', serif", marginTop: 4 }}>🔬 研究に使う</button>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button onClick={() => handlePromote(entry)} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 10, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'Georgia', serif" }}>🔬 研究に使う</button>
+                    <button onClick={() => handleShare(entry)} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 10, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'Georgia', serif" }}>📋 掲示板に共有</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -329,6 +358,296 @@
               <div style={{ fontSize: 40, marginBottom: 10, opacity: 0.4 }}>🌱</div>
               <div style={{ fontSize: 13 }}>記録を積み重ねると、<br />研究のテーマが見えてくる</div>
             </div>
+          )}
+        </div>
+      );
+    }
+ 
+    // ── 研究ノート画面 ───────────────────────────
+    function ResearchScreen() {
+      const [tab, setTab] = useState(0);
+      const [rqText, setRqText] = useState(["", ""]);
+      const [rqStatus, setRqStatus] = useState(["仮", "仮"]);
+      const [litTitle, setLitTitle] = useState("");
+      const [litNote, setLitNote] = useState("");
+      const [literatures, setLiteratures] = useState([]);
+      const [promoted, setPromoted] = useState([]);
+      const [aiLoading, setAiLoading] = useState("");
+      const [aiRQResult, setAiRQResult] = useState(localStorage.getItem(localKey("ai_rq")) || "");
+      const [aiKeywords, setAiKeywords] = useState(localStorage.getItem(localKey("ai_keywords")) || "");
+      const [aiLiterature, setAiLiterature] = useState(localStorage.getItem(localKey("ai_literature")) || "");
+ 
+      useEffect(() => {
+        const rq = localStorage.getItem(localKey("rq"));
+        if (rq) { const p = JSON.parse(rq); setRqText(p.text||["",""]); setRqStatus(p.status||["仮","仮"]); }
+        const lit = localStorage.getItem(localKey("literatures"));
+        if (lit) setLiteratures(JSON.parse(lit));
+        const pro = localStorage.getItem(localKey("promoted"));
+        if (pro) setPromoted(JSON.parse(pro));
+      }, []);
+ 
+      const saveRQ = () => { localStorage.setItem(localKey("rq"), JSON.stringify({ text: rqText, status: rqStatus })); alert("保存しました！"); };
+      const toggleStatus = () => { const u = [...rqStatus]; u[tab] = u[tab] === "仮" ? "確定" : "仮"; setRqStatus(u); };
+      const handleAddLit = () => {
+        if (!litTitle.trim() && !litNote.trim()) return;
+        const updated = [{ id: Date.now(), title: litTitle.trim(), note: litNote.trim(), tab }, ...literatures];
+        setLiteratures(updated); localStorage.setItem(localKey("literatures"), JSON.stringify(updated));
+        setLitTitle(""); setLitNote("");
+      };
+      const handleDeleteLit = (id) => {
+        if (!window.confirm("この文献メモを削除しますか？")) return;
+        const updated = literatures.filter(l => l.id !== id);
+        setLiteratures(updated); localStorage.setItem(localKey("literatures"), JSON.stringify(updated));
+      };
+      const handleDeletePromoted = (id) => {
+        if (!window.confirm("この気づきを研究ノートから外しますか？")) return;
+        const updated = promoted.filter(p => p.id !== id);
+        setPromoted(updated); localStorage.setItem(localKey("promoted"), JSON.stringify(updated));
+      };
+      const handleAIRQ = async () => {
+        const entries = loadEntriesLocal();
+        if (entries.length === 0) { alert("まず日記を記録してください。"); return; }
+        setAiLoading("rq");
+        const text = entries.slice(0, 20).map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n");
+        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の日記の記録です。この記録をもとに、実地研究・課題研究のリサーチクエスチョン候補を3つ提案してください。それぞれ1〜2文で具体的に書いてください。\n\n【日記の記録】\n${text}\n\n【出力形式】\n①〜\n②〜\n③〜`);
+        if (result) { setAiRQResult(result); localStorage.setItem(localKey("ai_rq"), result); try { await fsAddAILog({ type: "rq", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {} }
+        setAiLoading("");
+      };
+      const handleAIKeywords = async () => {
+        const entries = loadEntriesLocal();
+        const pro = promoted.filter(p => p.tab === tab);
+        if (entries.length === 0 && pro.length === 0) { alert("まず日記を記録してください。"); return; }
+        setAiLoading("keywords");
+        const text = pro.length > 0 ? pro.map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n") : entries.slice(0, 10).map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n");
+        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。この内容をもとに、CiNiiやGoogle Scholarで文献検索するときに使える検索キーワードを5つ提案してください。\n\n【気づきの記録】\n${text}\n\n【出力形式】\n①〜\n②〜\n③〜\n④〜\n⑤〜`);
+        if (result) { setAiKeywords(result); localStorage.setItem(localKey("ai_keywords"), result); try { await fsAddAILog({ type: "keywords", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {} }
+        setAiLoading("");
+      };
+      const handleAILiterature = async () => {
+        const pro = promoted.filter(p => p.tab === tab);
+        const entries = loadEntriesLocal();
+        if (entries.length === 0 && pro.length === 0) { alert("まず日記を記録してください。"); return; }
+        setAiLoading("literature");
+        const text = pro.length > 0 ? pro.map(e => `${e.event||""}　${e.question||""}`).join("\n") : entries.slice(0, 10).map(e => `${e.event||""}　${e.question||""}`).join("\n");
+        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。この内容に関連する実在する学術文献や書籍を3件紹介してください。必ず実在するものだけを紹介し、著者・タイトル・出版年・簡単な説明を書いてください。\n\n【気づきの記録】\n${text}\n\n【出力形式】\n①著者（出版年）「タイトル」\n→ 説明\n\n②著者（出版年）「タイトル」\n→ 説明\n\n③著者（出版年）「タイトル」\n→ 説明`);
+        if (result) { setAiLiterature(result); localStorage.setItem(localKey("ai_literature"), result); try { await fsAddAILog({ type: "literature", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {} }
+        setAiLoading("");
+      };
+ 
+      const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
+      const filteredLits = literatures.filter(l => l.tab === tab);
+      const filteredPromoted = promoted.filter(p => p.tab === tab);
+ 
+      return (
+        <div>
+          <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>研究ノート</div>
+          <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 16 }}>気づきと文献を研究へつなげる</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            {tabLabels.map((label, i) => (
+              <button key={label} onClick={() => setTab(i)} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1.5px solid ${tab === i ? C.green : C.bgDeep}`, background: tab === i ? C.green : "transparent", color: tab === i ? C.cream : C.inkLight, fontFamily: "'Georgia', serif", fontSize: 13, cursor: "pointer" }}>{label}</button>
+            ))}
+          </div>
+          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.gold}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase" }}>🔬 リサーチクエスチョン</div>
+              <span onClick={toggleStatus} style={{ background: rqStatus[tab] === "確定" ? C.green : C.gold, color: "#fff", borderRadius: 20, padding: "2px 10px", fontSize: 10, fontWeight: "bold", cursor: "pointer" }}>{rqStatus[tab]}</span>
+            </div>
+            <textarea value={rqText[tab]} onChange={(e) => { const u = [...rqText]; u[tab] = e.target.value; setRqText(u); }} rows={3} placeholder="例：待ち時間における子どもの自発的行動を促す環境要因とは何か？" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button onClick={saveRQ} style={{ flex: 1, background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>保存する</button>
+              <button onClick={handleAIRQ} disabled={aiLoading === "rq"} style={{ flex: 1, background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "rq" ? "考え中..." : "🤖 RQを提案してもらう"}</button>
+            </div>
+            {aiRQResult && (
+              <div style={{ background: C.bg, borderRadius: 12, padding: "14px", marginTop: 12, fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
+                <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>🤖 AIからの提案</div>
+                {aiRQResult}
+                <button onClick={() => { setAiRQResult(""); localStorage.removeItem(localKey("ai_rq")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
+              </div>
+            )}
+          </div>
+          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📌 昇格した気づき</div>
+            {filteredPromoted.length > 0 ? filteredPromoted.map((entry) => (
+              <div key={entry.id} style={{ borderBottom: `1px solid ${C.bgDeep}`, paddingBottom: 12, marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
+                  <button onClick={() => handleDeletePromoted(entry.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>🗑</button>
+                </div>
+                {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{entry.event}</div>}
+                {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.6, fontStyle: "italic" }}>💡 {entry.question}</div>}
+              </div>
+            )) : <div style={{ textAlign: "center", padding: "20px 0", color: C.inkLight, fontSize: 13 }}>ホームの記録から「🔬 研究に使う」で追加できます</div>}
+          </div>
+          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📚 文献メモ</div>
+            <div style={{ marginBottom: 14 }}>
+              <input type="text" value={litTitle} onChange={(e) => setLitTitle(e.target.value)} placeholder="著者・タイトル・年（例：山田 2020「保育環境論」）" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none", marginBottom: 8 }} />
+              <textarea value={litNote} onChange={(e) => setLitNote(e.target.value)} rows={3} placeholder="内容メモ（自分の言葉で）..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+              <button onClick={handleAddLit} style={{ width: "100%", background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", marginTop: 8 }}>＋ 文献メモを追加する</button>
+            </div>
+            {filteredLits.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 8 }}>追加済みの文献（{filteredLits.length}件）</div>
+                {filteredLits.map((lit) => (
+                  <div key={lit.id} style={{ background: C.bg, borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ fontSize: 13, fontWeight: "bold", color: C.ink, flex: 1 }}>{lit.title}</div>
+                      <button onClick={() => handleDeleteLit(lit.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14, marginLeft: 8 }}>🗑</button>
+                    </div>
+                    {lit.note && <div style={{ fontSize: 12, color: C.inkLight, lineHeight: 1.6, marginTop: 4 }}>{lit.note}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+              <button onClick={handleAIKeywords} disabled={aiLoading === "keywords"} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "keywords" ? "考え中..." : "🔍 検索キーワードを提案してもらう"}</button>
+              {aiKeywords && (
+                <div style={{ background: C.bg, borderRadius: 12, padding: "14px", fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
+                  <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>🔍 おすすめ検索キーワード</div>
+                  {aiKeywords}
+                  <button onClick={() => { setAiKeywords(""); localStorage.removeItem(localKey("ai_keywords")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
+                </div>
+              )}
+              <button onClick={handleAILiterature} disabled={aiLoading === "literature"} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "literature" ? "検索中..." : "📚 関連文献を探す"}</button>
+              {aiLiterature && (
+                <div style={{ background: C.bg, borderRadius: 12, padding: "14px", fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
+                  <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>📚 関連文献の候補</div>
+                  <div style={{ fontSize: 11, color: C.terra, marginBottom: 8 }}>⚠️ 必ずCiNiiやGoogle Scholarで実在を確認してください</div>
+                  {aiLiterature}
+                  <button onClick={() => { setAiLiterature(""); localStorage.removeItem(localKey("ai_literature")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+ 
+    // ── 掲示板画面 ───────────────────────────────
+    function BoardScreen() {
+      const [posts, setPosts] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [openComments, setOpenComments] = useState(null);
+      const [comments, setComments] = useState({});
+      const [commentText, setCommentText] = useState("");
+      const [posting, setPosting] = useState(false);
+ 
+      useEffect(() => {
+        const load = async () => {
+          try { const data = await fsGetPosts(); setPosts(data); }
+          catch(e) { console.log(e); }
+          setLoading(false);
+        };
+        load();
+      }, []);
+ 
+      const handleOpenComments = async (postId) => {
+        if (openComments === postId) { setOpenComments(null); return; }
+        setOpenComments(postId);
+        if (!comments[postId]) {
+          try {
+            const data = await fsGetComments(postId);
+            setComments(prev => ({ ...prev, [postId]: data }));
+          } catch(e) {}
+        }
+      };
+ 
+      const handleAddComment = async (postId) => {
+        if (!commentText.trim()) return;
+        setPosting(true);
+        try {
+          const newComment = {
+            uid: getUID(),
+            email: getEmail(),
+            text: commentText.trim(),
+            dateTime: new Date().toISOString(),
+            date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
+          };
+          await fsAddComment(postId, newComment);
+          const data = await fsGetComments(postId);
+          setComments(prev => ({ ...prev, [postId]: data }));
+          setCommentText("");
+        } catch(e) { alert("コメントの投稿に失敗しました。"); }
+        setPosting(false);
+      };
+ 
+      const handleDeletePost = async (postId, postUid) => {
+        if (postUid !== getUID()) { alert("自分の投稿のみ削除できます。"); return; }
+        if (!window.confirm("この投稿を削除しますか？")) return;
+        try {
+          await fsDeletePost(postId);
+          setPosts(prev => prev.filter(p => p.id !== postId));
+        } catch(e) { alert("削除に失敗しました。"); }
+      };
+ 
+      const getDisplayName = (email) => email ? email.split("@")[0] : "匿名";
+ 
+      return (
+        <div>
+          <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>みんなの掲示板</div>
+          <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>気づきを仲間と共有しよう</div>
+ 
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "30px", color: C.inkLight }}>読み込み中...</div>
+          ) : posts.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: C.inkLight }}>
+              <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.4 }}>📋</div>
+              <div style={{ fontSize: 13 }}>まだ投稿がありません。<br />ホームの記録から「掲示板に共有」してみましょう！</div>
+            </div>
+          ) : (
+            posts.map((post) => (
+              <div key={post.id} style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "16px 20px", marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: C.cream, fontWeight: "bold" }}>
+                      {getDisplayName(post.email)[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: "bold", color: C.ink }}>{getDisplayName(post.email)}</div>
+                      <div style={{ fontSize: 10, color: C.inkLight }}>{post.date}</div>
+                    </div>
+                  </div>
+                  {post.uid === getUID() && (
+                    <button onClick={() => handleDeletePost(post.id, post.uid)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>🗑</button>
+                  )}
+                </div>
+ 
+                {post.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 6 }}>{post.event}</div>}
+                {post.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.7, fontStyle: "italic", marginBottom: 6 }}>💡 {post.question}</div>}
+ 
+                <button onClick={() => handleOpenComments(post.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 12, padding: "4px 0", marginTop: 4 }}>
+                  💬 コメント {comments[post.id] ? `（${comments[post.id].length}件）` : "を見る"}
+                </button>
+ 
+                {openComments === post.id && (
+                  <div style={{ marginTop: 12, borderTop: `1px solid ${C.bgDeep}`, paddingTop: 12 }}>
+                    {comments[post.id] && comments[post.id].length > 0 ? (
+                      comments[post.id].map(c => (
+                        <div key={c.id} style={{ background: C.bg, borderRadius: 10, padding: "8px 12px", marginBottom: 8 }}>
+                          <div style={{ fontSize: 10, fontWeight: "bold", color: C.green, marginBottom: 4 }}>{getDisplayName(c.email)} · {c.date}</div>
+                          <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{c.text}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 10 }}>まだコメントはありません</div>
+                    )}
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <input
+                        type="text"
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="コメントを書く..."
+                        onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
+                        style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }}
+                      />
+                      <button onClick={() => handleAddComment(post.id)} disabled={posting} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>
+                        送信
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
           )}
         </div>
       );
@@ -428,207 +747,6 @@
       );
     }
  
-    // ── AI分析画面 ───────────────────────────────
-    function AIScreen() {
-      return (
-        <div>
-          <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>AI分析レポート</div>
-          <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>記録から研究の種を見つける</div>
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "30px 20px", textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.4 }}>🤖</div>
-            <div style={{ fontSize: 14, color: C.ink, lineHeight: 1.8 }}>AI機能は研究ノート画面から<br />使えます</div>
-            <div style={{ fontSize: 12, color: C.inkLight, marginTop: 8 }}>RQ提案・キーワード・文献検索</div>
-          </div>
-        </div>
-      );
-    }
- 
-    // ── 研究ノート画面 ───────────────────────────
-    function ResearchScreen() {
-      const [tab, setTab] = useState(0);
-      const [rqText, setRqText] = useState(["", ""]);
-      const [rqStatus, setRqStatus] = useState(["仮", "仮"]);
-      const [litTitle, setLitTitle] = useState("");
-      const [litNote, setLitNote] = useState("");
-      const [literatures, setLiteratures] = useState([]);
-      const [promoted, setPromoted] = useState([]);
-      const [aiLoading, setAiLoading] = useState("");
-      const [aiRQResult, setAiRQResult] = useState(localStorage.getItem(localKey("ai_rq")) || "");
-      const [aiKeywords, setAiKeywords] = useState(localStorage.getItem(localKey("ai_keywords")) || "");
-      const [aiLiterature, setAiLiterature] = useState(localStorage.getItem(localKey("ai_literature")) || "");
- 
-      useEffect(() => {
-        const rq = localStorage.getItem(localKey("rq"));
-        if (rq) { const p = JSON.parse(rq); setRqText(p.text||["",""]); setRqStatus(p.status||["仮","仮"]); }
-        const lit = localStorage.getItem(localKey("literatures"));
-        if (lit) setLiteratures(JSON.parse(lit));
-        const pro = localStorage.getItem(localKey("promoted"));
-        if (pro) setPromoted(JSON.parse(pro));
-      }, []);
- 
-      const saveRQ = () => {
-        localStorage.setItem(localKey("rq"), JSON.stringify({ text: rqText, status: rqStatus }));
-        alert("保存しました！");
-      };
-      const toggleStatus = () => {
-        const updated = [...rqStatus];
-        updated[tab] = updated[tab] === "仮" ? "確定" : "仮";
-        setRqStatus(updated);
-      };
-      const handleAddLit = () => {
-        if (!litTitle.trim() && !litNote.trim()) return;
-        const newLit = { id: Date.now(), title: litTitle.trim(), note: litNote.trim(), tab };
-        const updated = [newLit, ...literatures];
-        setLiteratures(updated);
-        localStorage.setItem(localKey("literatures"), JSON.stringify(updated));
-        setLitTitle(""); setLitNote("");
-      };
-      const handleDeleteLit = (id) => {
-        if (!window.confirm("この文献メモを削除しますか？")) return;
-        const updated = literatures.filter(l => l.id !== id);
-        setLiteratures(updated);
-        localStorage.setItem(localKey("literatures"), JSON.stringify(updated));
-      };
-      const handleDeletePromoted = (id) => {
-        if (!window.confirm("この気づきを研究ノートから外しますか？")) return;
-        const updated = promoted.filter(p => p.id !== id);
-        setPromoted(updated);
-        localStorage.setItem(localKey("promoted"), JSON.stringify(updated));
-      };
-      const handleAIRQ = async () => {
-        const entries = loadEntriesLocal();
-        if (entries.length === 0) { alert("まず日記を記録してください。"); return; }
-        setAiLoading("rq");
-        const entriesText = entries.slice(0, 20).map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n");
-        const prompt = `あなたは教育学の研究支援者です。以下は教育実習生の日記の記録です。この記録をもとに、実地研究・課題研究のリサーチクエスチョン候補を3つ提案してください。それぞれ1〜2文で具体的に書いてください。\n\n【日記の記録】\n${entriesText}\n\n【出力形式】\n①〜\n②〜\n③〜`;
-        const result = await callAI(prompt);
-        if (result) {
-          setAiRQResult(result);
-          localStorage.setItem(localKey("ai_rq"), result);
-          try { await fsAddAILog({ type: "rq", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {}
-        }
-        setAiLoading("");
-      };
-      const handleAIKeywords = async () => {
-        const entries = loadEntriesLocal();
-        const pro = promoted.filter(p => p.tab === tab);
-        if (entries.length === 0 && pro.length === 0) { alert("まず日記を記録してください。"); return; }
-        setAiLoading("keywords");
-        const entriesText = pro.length > 0 ? pro.map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n") : entries.slice(0, 10).map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n");
-        const prompt = `あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。この内容をもとに、CiNiiやGoogle Scholarで文献検索するときに使える検索キーワードを5つ提案してください。\n\n【気づきの記録】\n${entriesText}\n\n【出力形式】\n①〜\n②〜\n③〜\n④〜\n⑤〜`;
-        const result = await callAI(prompt);
-        if (result) {
-          setAiKeywords(result);
-          localStorage.setItem(localKey("ai_keywords"), result);
-          try { await fsAddAILog({ type: "keywords", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {}
-        }
-        setAiLoading("");
-      };
-      const handleAILiterature = async () => {
-        const pro = promoted.filter(p => p.tab === tab);
-        const entries = loadEntriesLocal();
-        if (entries.length === 0 && pro.length === 0) { alert("まず日記を記録してください。"); return; }
-        setAiLoading("literature");
-        const entriesText = pro.length > 0 ? pro.map(e => `${e.event||""}　${e.question||""}`).join("\n") : entries.slice(0, 10).map(e => `${e.event||""}　${e.question||""}`).join("\n");
-        const prompt = `あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。この内容に関連する実在する学術文献や書籍を3件紹介してください。必ず実在するものだけを紹介し、著者・タイトル・出版年・簡単な説明を書いてください。\n\n【気づきの記録】\n${entriesText}\n\n【出力形式】\n①著者（出版年）「タイトル」\n→ 説明\n\n②著者（出版年）「タイトル」\n→ 説明\n\n③著者（出版年）「タイトル」\n→ 説明`;
-        const result = await callAI(prompt);
-        if (result) {
-          setAiLiterature(result);
-          localStorage.setItem(localKey("ai_literature"), result);
-          try { await fsAddAILog({ type: "literature", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {}
-        }
-        setAiLoading("");
-      };
- 
-      const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
-      const filteredLits = literatures.filter(l => l.tab === tab);
-      const filteredPromoted = promoted.filter(p => p.tab === tab);
- 
-      return (
-        <div>
-          <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>研究ノート</div>
-          <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 16 }}>気づきと文献を研究へつなげる</div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            {tabLabels.map((label, i) => (
-              <button key={label} onClick={() => setTab(i)} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1.5px solid ${tab === i ? C.green : C.bgDeep}`, background: tab === i ? C.green : "transparent", color: tab === i ? C.cream : C.inkLight, fontFamily: "'Georgia', serif", fontSize: 13, cursor: "pointer" }}>{label}</button>
-            ))}
-          </div>
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.gold}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase" }}>🔬 リサーチクエスチョン</div>
-              <span onClick={toggleStatus} style={{ background: rqStatus[tab] === "確定" ? C.green : C.gold, color: "#fff", borderRadius: 20, padding: "2px 10px", fontSize: 10, fontWeight: "bold", cursor: "pointer" }}>{rqStatus[tab]}</span>
-            </div>
-            <textarea value={rqText[tab]} onChange={(e) => { const u = [...rqText]; u[tab] = e.target.value; setRqText(u); }} rows={3} placeholder="例：待ち時間における子どもの自発的行動を促す環境要因とは何か？" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <button onClick={saveRQ} style={{ flex: 1, background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>保存する</button>
-              <button onClick={handleAIRQ} disabled={aiLoading === "rq"} style={{ flex: 1, background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "rq" ? "考え中..." : "🤖 RQを提案してもらう"}</button>
-            </div>
-            {aiRQResult && (
-              <div style={{ background: C.bg, borderRadius: 12, padding: "14px", marginTop: 12, fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
-                <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>🤖 AIからの提案</div>
-                {aiRQResult}
-                <button onClick={() => { setAiRQResult(""); localStorage.removeItem(localKey("ai_rq")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
-              </div>
-            )}
-          </div>
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📌 昇格した気づき</div>
-            {filteredPromoted.length > 0 ? filteredPromoted.map((entry) => (
-              <div key={entry.id} style={{ borderBottom: `1px solid ${C.bgDeep}`, paddingBottom: 12, marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
-                  <button onClick={() => handleDeletePromoted(entry.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>🗑</button>
-                </div>
-                {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{entry.event}</div>}
-                {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.6, fontStyle: "italic" }}>💡 {entry.question}</div>}
-              </div>
-            )) : <div style={{ textAlign: "center", padding: "20px 0", color: C.inkLight, fontSize: 13 }}>ホームの記録から「🔬 研究に使う」で追加できます</div>}
-          </div>
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📚 文献メモ</div>
-            <div style={{ marginBottom: 14 }}>
-              <input type="text" value={litTitle} onChange={(e) => setLitTitle(e.target.value)} placeholder="著者・タイトル・年（例：山田 2020「保育環境論」）" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none", marginBottom: 8 }} />
-              <textarea value={litNote} onChange={(e) => setLitNote(e.target.value)} rows={3} placeholder="内容メモ（自分の言葉で）..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
-              <button onClick={handleAddLit} style={{ width: "100%", background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", marginTop: 8 }}>＋ 文献メモを追加する</button>
-            </div>
-            {filteredLits.length > 0 && (
-              <div>
-                <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 8 }}>追加済みの文献（{filteredLits.length}件）</div>
-                {filteredLits.map((lit) => (
-                  <div key={lit.id} style={{ background: C.bg, borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div style={{ fontSize: 13, fontWeight: "bold", color: C.ink, flex: 1 }}>{lit.title}</div>
-                      <button onClick={() => handleDeleteLit(lit.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14, marginLeft: 8 }}>🗑</button>
-                    </div>
-                    {lit.note && <div style={{ fontSize: 12, color: C.inkLight, lineHeight: 1.6, marginTop: 4 }}>{lit.note}</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-              <button onClick={handleAIKeywords} disabled={aiLoading === "keywords"} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "keywords" ? "考え中..." : "🔍 検索キーワードを提案してもらう"}</button>
-              {aiKeywords && (
-                <div style={{ background: C.bg, borderRadius: 12, padding: "14px", fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
-                  <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>🔍 おすすめ検索キーワード</div>
-                  {aiKeywords}
-                  <button onClick={() => { setAiKeywords(""); localStorage.removeItem(localKey("ai_keywords")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
-                </div>
-              )}
-              <button onClick={handleAILiterature} disabled={aiLoading === "literature"} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "literature" ? "検索中..." : "📚 関連文献を探す"}</button>
-              {aiLiterature && (
-                <div style={{ background: C.bg, borderRadius: 12, padding: "14px", fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
-                  <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>📚 関連文献の候補</div>
-                  <div style={{ fontSize: 11, color: C.terra, marginBottom: 8 }}>⚠️ 必ずCiNiiやGoogle Scholarで実在を確認してください</div>
-                  {aiLiterature}
-                  <button onClick={() => { setAiLiterature(""); localStorage.removeItem(localKey("ai_literature")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
- 
     // ── 設定画面 ─────────────────────────────────
     function SettingsScreen({ onLogout, userEmail }) {
       const [exportStart, setExportStart] = useState("");
@@ -640,13 +758,11 @@
         await signOut(window._taneruAuth);
         onLogout();
       };
- 
       const handleClear = () => {
         if (!window.confirm("ローカルキャッシュを削除しますか？")) return;
         ["entries","rq","literatures","promoted","ai_logs","ai_rq","ai_keywords","ai_literature"].forEach(k => localStorage.removeItem(localKey(k)));
         alert("削除しました。");
       };
- 
       const downloadText = (filename, content) => {
         const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
@@ -654,7 +770,6 @@
         a.href = url; a.download = filename; a.click();
         URL.revokeObjectURL(url);
       };
- 
       const exportDiary = async () => {
         let entries = [];
         try { entries = await fsGetEntries(); } catch(e) { entries = loadEntriesLocal(); }
@@ -675,7 +790,6 @@
         });
         downloadText(`taneru_diary_${exportStart || "all"}.txt`, text);
       };
- 
       const exportResearch = () => {
         const rq = JSON.parse(localStorage.getItem(localKey("rq")) || '{"text":["",""],"status":["仮","仮"]}');
         const promoted = JSON.parse(localStorage.getItem(localKey("promoted")) || "[]");
@@ -695,7 +809,6 @@
         });
         downloadText("taneru_research.txt", text);
       };
- 
       const exportAll = async () => {
         let entries = [];
         try { entries = await fsGetEntries(); } catch(e) { entries = loadEntriesLocal(); }
@@ -769,18 +882,18 @@
               <button onClick={handleLogout} style={{ background: C.terra, color: "#fff", border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>ログアウト</button>
             </div>
           </div>
-          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.4 — 気づきから研究へ 🌱</div>
+          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.5 — 気づきから研究へ 🌱</div>
         </div>
       );
     }
  
     // ── メインアプリ ─────────────────────────────
     const NAV = [
-      { id: "home", icon: "✏️", label: "記録" },
-      { id: "calendar", icon: "📅", label: "カレンダー" },
-      { id: "ai", icon: "🤖", label: "AI分析" },
-      { id: "research", icon: "🔬", label: "研究" },
-      { id: "settings", icon: "⚙️", label: "設定" },
+      { id: "home",     icon: "✏️",  label: "記録" },
+      { id: "research", icon: "🔬",  label: "研究" },
+      { id: "board",    icon: "📋",  label: "掲示板" },
+      { id: "calendar", icon: "📅",  label: "カレンダー" },
+      { id: "settings", icon: "⚙️",  label: "設定" },
     ];
  
     function App() {
@@ -791,10 +904,7 @@
       useEffect(() => {
         const check = () => {
           const { onAuthStateChanged } = window._taneruAuthFns;
-          onAuthStateChanged(window._taneruAuth, (u) => {
-            setUser(u);
-            setAuthChecked(true);
-          });
+          onAuthStateChanged(window._taneruAuth, (u) => { setUser(u); setAuthChecked(true); });
         };
         if (window._taneruDBReady) check();
         else window.addEventListener("taneruDBReady", check, { once: true });
@@ -811,8 +921,10 @@
       if (!user) return <LoginScreen />;
  
       const screens = {
-        home: <HomeScreen />, calendar: <CalendarScreen />, ai: <AIScreen />,
+        home: <HomeScreen />,
         research: <ResearchScreen />,
+        board: <BoardScreen />,
+        calendar: <CalendarScreen />,
         settings: <SettingsScreen onLogout={() => setUser(null)} userEmail={user.email} />,
       };
  
