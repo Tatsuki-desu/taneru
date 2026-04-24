@@ -51,7 +51,7 @@
     function getDB() { return window._taneruDB; }
     function getFS() { return window._taneruFirestore; }
  
-    // ── ユーザーごとのFirestore操作 ──────────────
+    // ── Firestore操作 ────────────────────────────
     async function fsAddEntry(entry) {
       const uid = getUID(); if (!uid) return;
       const { collection, addDoc } = getFS();
@@ -81,8 +81,6 @@
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ ...d.data(), id: d.id }));
     }
- 
-    // ── 掲示板のFirestore操作（全ユーザー共有）──
     async function fsAddPost(post) {
       const { collection, addDoc } = getFS();
       await addDoc(collection(getDB(), "shared_posts"), post);
@@ -107,8 +105,11 @@
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ ...d.data(), id: d.id }));
     }
+    async function fsDeleteComment(postId, commentId) {
+      const { doc, deleteDoc } = getFS();
+      await deleteDoc(doc(getDB(), "shared_posts", postId, "comments", commentId));
+    }
  
-    // ── ローカルキャッシュ ───────────────────────
     function localKey(key) {
       const uid = getUID();
       return uid ? `taneru_${uid}_${key}` : `taneru_${key}`;
@@ -121,7 +122,6 @@
       localStorage.setItem(localKey("entries"), JSON.stringify(entries));
     }
  
-    // ── AI呼び出し ───────────────────────────────
     async function callAI(prompt) {
       const apiKey = localStorage.getItem("taneru_api_key");
       if (!apiKey) { alert("設定画面でAPIキーを入力してください。"); return null; }
@@ -136,7 +136,7 @@
           },
           body: JSON.stringify({
             model: "claude-opus-4-6",
-            max_tokens: 1000,
+            max_tokens: 1500,
             messages: [{ role: "user", content: prompt }],
           }),
         });
@@ -194,6 +194,97 @@
       return <div style={{ fontSize: 10, color: synced ? C.greenLight : C.gold }}>{synced ? "☁️ クラウド同期済" : "⏳ 同期中..."}</div>;
     }
  
+    // ── ヘルプ画面 ───────────────────────────────
+    function HelpScreen({ onClose }) {
+      const sections = [
+        {
+          icon: "✏️", title: "記録画面",
+          items: [
+            "日付を選んで、その日の出来事・疑問・フィードバックを記録します。",
+            "感情タグ（驚き・モヤモヤ・ひらめき・疑問）を選んで気持ちも記録できます。",
+            "「🔬 研究に使う」→ 記録を研究ノートに昇格させます。",
+            "「📋 掲示板に共有」→ 仲間と気づきを共有できます。",
+            "過去の日付を選べば、先週の記録も後から入力できます。",
+          ]
+        },
+        {
+          icon: "🔬", title: "研究ノート画面",
+          items: [
+            "実地研究Ⅱと課題研究Ⅱのタブで切り替えて管理できます。",
+            "リサーチクエスチョン（研究で答えたい問い）を書いて保存します。",
+            "「🤖 RQを提案してもらう」→ AIが日記をもとにRQ候補を3つ提案します。",
+            "「🔭 研究の方向性を提案してもらう」→ 昇格した気づきから研究の方向性を示します。",
+            "「🔍 検索キーワード提案」→ 文献検索に使えるキーワードを提案します。",
+            "「📚 関連文献を探す」→ AIが関連する学術文献を紹介します（要CiNiiで確認）。",
+          ]
+        },
+        {
+          icon: "📋", title: "掲示板画面",
+          items: [
+            "記録画面から共有した気づきが表示されます。",
+            "「💬 コメント」をタップするとコメントの入力欄が開きます。",
+            "投稿の削除は投稿した本人のみできます。",
+            "コメントの削除は誰でもできます。",
+          ]
+        },
+        {
+          icon: "📅", title: "カレンダー画面",
+          items: [
+            "記録した日が緑色に色づきます。",
+            "AI提案があった日には金色の点が表示されます。",
+            "日付をタップするとその日の記録とAI提案が確認できます。",
+          ]
+        },
+        {
+          icon: "⚙️", title: "設定画面",
+          items: [
+            "AnthropicのAPIキーを入力するとAI機能が使えるようになります。",
+            "日記の記録・研究ノート・全体レポートをテキストファイルでエクスポートできます。",
+            "ログアウトボタンでアカウントを切り替えられます。",
+          ]
+        },
+        {
+          icon: "❓", title: "困ったときは",
+          items: [
+            "記録が表示されない → ページを再読み込みしてください。",
+            "AI機能が使えない → 設定画面でAPIキーを確認してください。",
+            "ログインできない → メールアドレスとパスワードを確認してください。管理者に連絡してアカウントを確認しましょう。",
+            "掲示板に投稿できない → インターネット接続を確認してください。",
+          ]
+        },
+      ];
+ 
+      return (
+        <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 440, height: "100%", background: C.bg, zIndex: 1000, overflowY: "auto", padding: "0 0 40px" }}>
+          <div style={{ background: C.green, padding: "18px 24px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: "bold", color: "#FAF7F2", fontStyle: "italic" }}>使い方ガイド</div>
+              <div style={{ fontSize: 10, color: "#8FB573", letterSpacing: "0.1em", marginTop: 2 }}>Taneru の使い方</div>
+            </div>
+            <button onClick={onClose} style={{ background: "transparent", border: "none", color: "#FAF7F2", fontSize: 22, cursor: "pointer", padding: "4px 8px" }}>✕</button>
+          </div>
+          <div style={{ padding: "20px 20px" }}>
+            <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "16px 20px", marginBottom: 14 }}>
+              <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.8 }}>
+                Taneruは実習中の気づきを記録して、研究テーマを育てるためのアプリです。毎日少しずつ記録を積み重ねることで、研究の種が見つかります🌱
+              </div>
+            </div>
+            {sections.map((s) => (
+              <div key={s.title} style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "16px 20px", marginBottom: 14 }}>
+                <div style={{ fontSize: 14, fontWeight: "bold", color: C.green, marginBottom: 12 }}>{s.icon} {s.title}</div>
+                {s.items.map((item, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 13, color: C.ink, lineHeight: 1.7 }}>
+                    <span style={{ color: C.greenLight, flexShrink: 0, marginTop: 2 }}>•</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+ 
     // ── ホーム画面 ───────────────────────────────
     function HomeScreen() {
       const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
@@ -233,13 +324,9 @@
         if (!window.confirm("この気づきを掲示板に共有しますか？")) return;
         try {
           await fsAddPost({
-            uid: getUID(),
-            email: getEmail(),
-            date: entry.date,
+            uid: getUID(), email: getEmail(), date: entry.date,
             dateTime: new Date().toISOString(),
-            event: entry.event || "",
-            question: entry.question || "",
-            feedback: entry.feedback || "",
+            event: entry.event || "", question: entry.question || "", feedback: entry.feedback || "",
           });
           alert("掲示板に共有しました！");
         } catch(e) { alert("共有に失敗しました。"); }
@@ -376,6 +463,7 @@
       const [aiRQResult, setAiRQResult] = useState(localStorage.getItem(localKey("ai_rq")) || "");
       const [aiKeywords, setAiKeywords] = useState(localStorage.getItem(localKey("ai_keywords")) || "");
       const [aiLiterature, setAiLiterature] = useState(localStorage.getItem(localKey("ai_literature")) || "");
+      const [aiDirection, setAiDirection] = useState(localStorage.getItem(localKey("ai_direction")) || "");
  
       useEffect(() => {
         const rq = localStorage.getItem(localKey("rq"));
@@ -404,6 +492,8 @@
         const updated = promoted.filter(p => p.id !== id);
         setPromoted(updated); localStorage.setItem(localKey("promoted"), JSON.stringify(updated));
       };
+ 
+      // ── AI機能 ──────────────────────────────
       const handleAIRQ = async () => {
         const entries = loadEntriesLocal();
         if (entries.length === 0) { alert("まず日記を記録してください。"); return; }
@@ -413,6 +503,19 @@
         if (result) { setAiRQResult(result); localStorage.setItem(localKey("ai_rq"), result); try { await fsAddAILog({ type: "rq", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {} }
         setAiLoading("");
       };
+ 
+      // ② 研究の方向性を提案する（新機能）
+      const handleAIDirection = async () => {
+        const pro = promoted.filter(p => p.tab === tab);
+        if (pro.length === 0) { alert("まず「研究に使う」で気づきを昇格させてください。"); return; }
+        setAiLoading("direction");
+        const text = pro.map(e => `・${e.event||""}　${e.question ? "【疑問】" + e.question : ""}`).join("\n");
+        const rq = rqText[tab] ? `現在のRQ：${rqText[tab]}` : "";
+        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生が「研究に使う」と選んだ重要な気づきです。${rq}\n\nこれらの気づきを分析して、以下の3点を教えてください。\n\n①【共通するテーマ】気づきに共通して流れているテーマや問いは何か\n②【研究の方向性】どのような研究に発展させると良いか（具体的に）\n③【次のステップ】研究を進めるために今すぐできることは何か\n\n【昇格した気づき】\n${text}`);
+        if (result) { setAiDirection(result); localStorage.setItem(localKey("ai_direction"), result); try { await fsAddAILog({ type: "direction", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {} }
+        setAiLoading("");
+      };
+ 
       const handleAIKeywords = async () => {
         const entries = loadEntriesLocal();
         const pro = promoted.filter(p => p.tab === tab);
@@ -447,6 +550,8 @@
               <button key={label} onClick={() => setTab(i)} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1.5px solid ${tab === i ? C.green : C.bgDeep}`, background: tab === i ? C.green : "transparent", color: tab === i ? C.cream : C.inkLight, fontFamily: "'Georgia', serif", fontSize: 13, cursor: "pointer" }}>{label}</button>
             ))}
           </div>
+ 
+          {/* RQ */}
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.gold}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase" }}>🔬 リサーチクエスチョン</div>
@@ -465,19 +570,38 @@
               </div>
             )}
           </div>
+ 
+          {/* 昇格した気づき */}
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📌 昇格した気づき</div>
-            {filteredPromoted.length > 0 ? filteredPromoted.map((entry) => (
-              <div key={entry.id} style={{ borderBottom: `1px solid ${C.bgDeep}`, paddingBottom: 12, marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
-                  <button onClick={() => handleDeletePromoted(entry.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>🗑</button>
-                </div>
-                {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{entry.event}</div>}
-                {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.6, fontStyle: "italic" }}>💡 {entry.question}</div>}
+            {filteredPromoted.length > 0 ? (
+              <div>
+                {filteredPromoted.map((entry) => (
+                  <div key={entry.id} style={{ borderBottom: `1px solid ${C.bgDeep}`, paddingBottom: 12, marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
+                      <button onClick={() => handleDeletePromoted(entry.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>🗑</button>
+                    </div>
+                    {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{entry.event}</div>}
+                    {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.6, fontStyle: "italic" }}>💡 {entry.question}</div>}
+                  </div>
+                ))}
+                {/* ② 研究の方向性を提案ボタン */}
+                <button onClick={handleAIDirection} disabled={aiLoading === "direction"} style={{ width: "100%", background: aiLoading === "direction" ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", marginTop: 4 }}>
+                  {aiLoading === "direction" ? "分析中..." : "🔭 研究の方向性を提案してもらう"}
+                </button>
+                {aiDirection && (
+                  <div style={{ background: C.green + "11", border: `1px solid ${C.green}33`, borderRadius: 12, padding: "14px", marginTop: 12, fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
+                    <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>🔭 研究の方向性</div>
+                    {aiDirection}
+                    <button onClick={() => { setAiDirection(""); localStorage.removeItem(localKey("ai_direction")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
+                  </div>
+                )}
               </div>
-            )) : <div style={{ textAlign: "center", padding: "20px 0", color: C.inkLight, fontSize: 13 }}>ホームの記録から「🔬 研究に使う」で追加できます</div>}
+            ) : <div style={{ textAlign: "center", padding: "20px 0", color: C.inkLight, fontSize: 13 }}>ホームの記録から「🔬 研究に使う」で追加できます</div>}
           </div>
+ 
+          {/* 文献メモ */}
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📚 文献メモ</div>
             <div style={{ marginBottom: 14 }}>
@@ -535,7 +659,7 @@
       useEffect(() => {
         const load = async () => {
           try { const data = await fsGetPosts(); setPosts(data); }
-          catch(e) { console.log(e); }
+          catch(e) {}
           setLoading(false);
         };
         load();
@@ -557,9 +681,7 @@
         setPosting(true);
         try {
           const newComment = {
-            uid: getUID(),
-            email: getEmail(),
-            text: commentText.trim(),
+            uid: getUID(), email: getEmail(), text: commentText.trim(),
             dateTime: new Date().toISOString(),
             date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
           };
@@ -571,12 +693,25 @@
         setPosting(false);
       };
  
+      // 投稿の削除（投稿者のみ）
       const handleDeletePost = async (postId, postUid) => {
         if (postUid !== getUID()) { alert("自分の投稿のみ削除できます。"); return; }
         if (!window.confirm("この投稿を削除しますか？")) return;
         try {
           await fsDeletePost(postId);
           setPosts(prev => prev.filter(p => p.id !== postId));
+        } catch(e) { alert("削除に失敗しました。"); }
+      };
+ 
+      // コメントの削除（誰でも可）
+      const handleDeleteComment = async (postId, commentId) => {
+        if (!window.confirm("このコメントを削除しますか？")) return;
+        try {
+          await fsDeleteComment(postId, commentId);
+          setComments(prev => ({
+            ...prev,
+            [postId]: prev[postId].filter(c => c.id !== commentId)
+          }));
         } catch(e) { alert("削除に失敗しました。"); }
       };
  
@@ -607,6 +742,7 @@
                       <div style={{ fontSize: 10, color: C.inkLight }}>{post.date}</div>
                     </div>
                   </div>
+                  {/* 投稿者のみ削除可 */}
                   {post.uid === getUID() && (
                     <button onClick={() => handleDeletePost(post.id, post.uid)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>🗑</button>
                   )}
@@ -624,7 +760,11 @@
                     {comments[post.id] && comments[post.id].length > 0 ? (
                       comments[post.id].map(c => (
                         <div key={c.id} style={{ background: C.bg, borderRadius: 10, padding: "8px 12px", marginBottom: 8 }}>
-                          <div style={{ fontSize: 10, fontWeight: "bold", color: C.green, marginBottom: 4 }}>{getDisplayName(c.email)} · {c.date}</div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                            <div style={{ fontSize: 10, fontWeight: "bold", color: C.green }}>{getDisplayName(c.email)} · {c.date}</div>
+                            {/* コメントは誰でも削除可 */}
+                            <button onClick={() => handleDeleteComment(post.id, c.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 12 }}>🗑</button>
+                          </div>
                           <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{c.text}</div>
                         </div>
                       ))
@@ -633,16 +773,11 @@
                     )}
                     <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                       <input
-                        type="text"
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        placeholder="コメントを書く..."
-                        onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
+                        type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="コメントを書く..." onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
                         style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }}
                       />
-                      <button onClick={() => handleAddComment(post.id)} disabled={posting} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>
-                        送信
-                      </button>
+                      <button onClick={() => handleAddComment(post.id)} disabled={posting} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>送信</button>
                     </div>
                   </div>
                 )}
@@ -671,7 +806,7 @@
       const today = new Date().getDate();
       const recordedDays = [...new Set(entries.map(e => new Date(e.dateTime).getDate()))];
       const aiDays = [...new Set(aiLogs.map(l => new Date(l.dateTime).getDate()))];
-      const typeLabel = { rq: "🔬 RQ提案", keywords: "🔍 キーワード提案", literature: "📚 関連文献" };
+      const typeLabel = { rq: "🔬 RQ提案", keywords: "🔍 キーワード提案", literature: "📚 関連文献", direction: "🔭 研究の方向性" };
       const dayEntries = selectedDay ? entries.filter(e => new Date(e.dateTime).getDate() === selectedDay) : [];
       const dayAILogs = selectedDay ? aiLogs.filter(l => new Date(l.dateTime).getDate() === selectedDay) : [];
  
@@ -760,7 +895,7 @@
       };
       const handleClear = () => {
         if (!window.confirm("ローカルキャッシュを削除しますか？")) return;
-        ["entries","rq","literatures","promoted","ai_logs","ai_rq","ai_keywords","ai_literature"].forEach(k => localStorage.removeItem(localKey(k)));
+        ["entries","rq","literatures","promoted","ai_logs","ai_rq","ai_keywords","ai_literature","ai_direction"].forEach(k => localStorage.removeItem(localKey(k)));
         alert("削除しました。");
       };
       const downloadText = (filename, content) => {
@@ -882,7 +1017,7 @@
               <button onClick={handleLogout} style={{ background: C.terra, color: "#fff", border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>ログアウト</button>
             </div>
           </div>
-          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.5 — 気づきから研究へ 🌱</div>
+          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.6 — 気づきから研究へ 🌱</div>
         </div>
       );
     }
@@ -900,6 +1035,7 @@
       const [screen, setScreen] = useState("home");
       const [user, setUser] = useState(null);
       const [authChecked, setAuthChecked] = useState(false);
+      const [showHelp, setShowHelp] = useState(false);
  
       useEffect(() => {
         const check = () => {
@@ -930,12 +1066,16 @@
  
       return (
         <div style={{ fontFamily: "'Georgia', 'Times New Roman', serif", background: C.bg, minHeight: "100vh", maxWidth: 440, margin: "0 auto", display: "flex", flexDirection: "column", boxShadow: "0 0 40px rgba(0,0,0,0.12)" }}>
+          {showHelp && <HelpScreen onClose={() => setShowHelp(false)} />}
           <div style={{ background: C.green, padding: "18px 24px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", overflow: "hidden" }}>
             <div>
               <div style={{ fontSize: 22, fontWeight: "bold", color: "#FAF7F2", letterSpacing: "0.08em", fontStyle: "italic" }}>Taneru</div>
               <div style={{ fontSize: 10, color: "#8FB573", letterSpacing: "0.2em", textTransform: "uppercase", marginTop: 2 }}>気づきから研究へ</div>
             </div>
-            <div style={{ fontSize: 10, color: "#8FB573", opacity: 0.8, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontSize: 10, color: "#8FB573", opacity: 0.8, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</div>
+              <button onClick={() => setShowHelp(true)} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#FAF7F2", borderRadius: "50%", width: 26, height: 26, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>？</button>
+            </div>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 100px" }}>
             {screens[screen]}
