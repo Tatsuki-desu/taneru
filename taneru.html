@@ -16,15 +16,87 @@
 </head>
 <body>
   <div id="root"></div>
+ 
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+ 
+    const firebaseConfig = {
+      apiKey: "AIzaSyC44xqcJ3rs2aBqJLslaz51dj46Sck45Pw",
+      authDomain: "taneru-53d46.firebaseapp.com",
+      projectId: "taneru-53d46",
+      storageBucket: "taneru-53d46.firebasestorage.app",
+      messagingSenderId: "835922049",
+      appId: "1:835922049:web:3df61514828833f930c580"
+    };
+ 
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+ 
+    // dbをグローバルに公開してReactから使えるようにする
+    window._taneruDB = db;
+    window._taneruFirestore = {
+      collection, addDoc, getDocs, deleteDoc, doc, setDoc, onSnapshot, query, orderBy
+    };
+    window._taneruDBReady = true;
+    window.dispatchEvent(new Event("taneruDBReady"));
+  </script>
+ 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
     const C = {
       bg: "#F7F3ED", bgDeep: "#EDE7DC", green: "#2D5016", greenMid: "#4A7C2F",
       greenLight: "#8FB573", cream: "#FAF7F2", terra: "#C4622D",
       ink: "#1C1C1A", inkLight: "#6B6860", gold: "#D4A843",
     };
  
-    // ── AI呼び出し ──────────────────────────────
+    // ── Firestore操作ヘルパー ────────────────────
+    function getDB() { return window._taneruDB; }
+    function getFS() { return window._taneruFirestore; }
+ 
+    async function fsAddEntry(entry) {
+      const { collection, addDoc } = getFS();
+      await addDoc(collection(getDB(), "entries"), entry);
+    }
+ 
+    async function fsDeleteEntry(id) {
+      const { doc, deleteDoc } = getFS();
+      await deleteDoc(doc(getDB(), "entries", id));
+    }
+ 
+    async function fsGetEntries() {
+      const { collection, getDocs, query, orderBy } = getFS();
+      const q = query(collection(getDB(), "entries"), orderBy("dateTime", "desc"));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    }
+ 
+    async function fsSaveDoc(docName, data) {
+      const { doc, setDoc } = getFS();
+      await setDoc(doc(getDB(), "settings", docName), data);
+    }
+ 
+    async function fsGetDoc(docName) {
+      const { doc, getDocs, collection } = getFS();
+      const { getDoc } = await import("https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js");
+      const snap = await getDoc(doc(getDB(), "settings", docName));
+      return snap.exists() ? snap.data() : null;
+    }
+ 
+    async function fsAddAILog(log) {
+      const { collection, addDoc } = getFS();
+      await addDoc(collection(getDB(), "ai_logs"), log);
+    }
+ 
+    async function fsGetAILogs() {
+      const { collection, getDocs, query, orderBy } = getFS();
+      const q = query(collection(getDB(), "ai_logs"), orderBy("dateTime", "desc"));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    }
+ 
+    // ── AI呼び出し ───────────────────────────────
     async function callAI(prompt) {
       const apiKey = localStorage.getItem("taneru_api_key");
       if (!apiKey) { alert("設定画面でAPIキーを入力してください。"); return null; }
@@ -49,27 +121,22 @@
       } catch (e) { alert("通信エラーが発生しました。"); return null; }
     }
  
-    // ── データ操作 ───────────────────────────────
-    function loadEntries() {
+    // ── ローカルフォールバック（オフライン用）────
+    function loadEntriesLocal() {
       const data = localStorage.getItem("taneru_entries");
       return data ? JSON.parse(data) : [];
     }
-    function saveEntries(entries) {
+    function saveEntriesLocal(entries) {
       localStorage.setItem("taneru_entries", JSON.stringify(entries));
     }
  
-    // AIの提案をai_logsとして保存する
-    function saveAILog(type, content) {
-      const logs = JSON.parse(localStorage.getItem("taneru_ai_logs") || "[]");
-      const newLog = {
-        id: Date.now(),
-        type, // "rq" | "keywords" | "literature"
-        content,
-        date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
-        dateTime: new Date().toISOString(),
-      };
-      const updated = [newLog, ...logs];
-      localStorage.setItem("taneru_ai_logs", JSON.stringify(updated));
+    // ── 同期状態バッジ ───────────────────────────
+    function SyncBadge({ synced }) {
+      return (
+        <div style={{ fontSize: 10, color: synced ? C.greenLight : C.gold, letterSpacing: "0.08em" }}>
+          {synced ? "☁️ クラウド同期済" : "⏳ 同期中..."}
+        </div>
+      );
     }
  
     // ── ホーム画面 ───────────────────────────────
@@ -84,11 +151,37 @@
       const [entries, setEntries] = useState([]);
       const [saved, setSaved] = useState(false);
       const [search, setSearch] = useState("");
-      useEffect(() => { setEntries(loadEntries()); }, []);
+      const [synced, setSynced] = useState(false);
+      const [loading, setLoading] = useState(true);
+ 
+      useEffect(() => {
+        const load = async () => {
+          if (window._taneruDBReady) {
+            try {
+              const data = await fsGetEntries();
+              setEntries(data);
+              setSynced(true);
+            } catch(e) {
+              setEntries(loadEntriesLocal());
+            }
+          } else {
+            setEntries(loadEntriesLocal());
+            window.addEventListener("taneruDBReady", async () => {
+              try {
+                const data = await fsGetEntries();
+                setEntries(data);
+                setSynced(true);
+              } catch(e) {}
+            }, { once: true });
+          }
+          setLoading(false);
+        };
+        load();
+      }, []);
  
       const toggleTag = (t) => setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
  
-      const handlePromote = (entry) => {
+      const handlePromote = async (entry) => {
         const tab = window.confirm("実地研究Ⅱに追加しますか？\nOK → 実地研究Ⅱ\nキャンセル → 課題研究Ⅱ") ? 0 : 1;
         const promoted = JSON.parse(localStorage.getItem("taneru_promoted") || "[]");
         const already = promoted.find(p => p.id === entry.id && p.tab === tab);
@@ -98,33 +191,48 @@
         alert("研究ノートに追加しました！");
       };
  
-      const handleDelete = (id) => {
+      const handleDelete = async (id) => {
         if (!window.confirm("この記録を削除しますか？")) return;
-        const updated = loadEntries().filter(e => e.id !== id);
-        saveEntries(updated);
-        setEntries(updated);
+        try {
+          await fsDeleteEntry(id);
+          const updated = entries.filter(e => e.id !== id);
+          setEntries(updated);
+          saveEntriesLocal(updated);
+        } catch(e) {
+          const updated = loadEntriesLocal().filter(e => e.id !== id);
+          saveEntriesLocal(updated);
+          setEntries(updated);
+        }
       };
  
-      const handleSave = () => {
+      const handleSave = async () => {
         if (!event.trim() && !question.trim()) return;
         const newEntry = {
-          id: Date.now(),
           date: new Date(selectedDate + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
           dateTime: new Date(selectedDate + "T00:00:00").toISOString(),
           event: event.trim(), question: question.trim(), tags, feedback: feedback.trim(),
         };
-        const updated = [newEntry, ...loadEntries()];
-        saveEntries(updated);
-        setEntries(updated);
-        setEvent(""); setQuestion(""); setTags([]); setFeedback("");
         setSaved(true);
+        try {
+          await fsAddEntry(newEntry);
+          const data = await fsGetEntries();
+          setEntries(data);
+          saveEntriesLocal(data);
+          setSynced(true);
+        } catch(e) {
+          const withId = { ...newEntry, id: Date.now().toString() };
+          const updated = [withId, ...loadEntriesLocal()];
+          saveEntriesLocal(updated);
+          setEntries(updated);
+        }
+        setEvent(""); setQuestion(""); setTags([]); setFeedback("");
         setTimeout(() => setSaved(false), 2000);
       };
  
       const filteredEntries = entries.filter(e => {
         if (!search.trim()) return true;
         const kw = search.trim().toLowerCase();
-        return e.event.toLowerCase().includes(kw) || e.question.toLowerCase().includes(kw) || (e.feedback && e.feedback.toLowerCase().includes(kw));
+        return (e.event||"").toLowerCase().includes(kw) || (e.question||"").toLowerCase().includes(kw) || (e.feedback||"").toLowerCase().includes(kw);
       });
  
       const emotionTags = ["😮 驚き", "😟 モヤモヤ", "💡 ひらめき", "❓ 疑問"];
@@ -132,8 +240,11 @@
       return (
         <div>
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, color: C.inkLight, letterSpacing: "0.12em", marginBottom: 4 }}>{today}</div>
-            <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic" }}>今日の気づきを記録する</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 11, color: C.inkLight, letterSpacing: "0.12em" }}>{today}</div>
+              <SyncBadge synced={synced} />
+            </div>
+            <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginTop: 4 }}>今日の気づきを記録する</div>
           </div>
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
             <div style={{ marginBottom: 14 }}>
@@ -162,7 +273,10 @@
               {saved ? "保存しました！✓" : "この気づきを記録する 🌱"}
             </button>
           </div>
-          {entries.length > 0 ? (
+ 
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "20px", color: C.inkLight, fontSize: 13 }}>読み込み中...</div>
+          ) : entries.length > 0 ? (
             <div>
               <div style={{ marginBottom: 12 }}>
                 <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 キーワードで検索..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.cream, color: C.ink, outline: "none" }} />
@@ -205,19 +319,30 @@
       const [selectedDay, setSelectedDay] = useState(null);
  
       useEffect(() => {
-        setEntries(loadEntries());
-        const logs = JSON.parse(localStorage.getItem("taneru_ai_logs") || "[]");
-        setAiLogs(logs);
+        const load = async () => {
+          try {
+            const data = await fsGetEntries();
+            setEntries(data);
+          } catch(e) {
+            setEntries(loadEntriesLocal());
+          }
+          try {
+            const logs = await fsGetAILogs();
+            setAiLogs(logs);
+          } catch(e) {
+            const local = localStorage.getItem("taneru_ai_logs");
+            if (local) setAiLogs(JSON.parse(local));
+          }
+        };
+        if (window._taneruDBReady) load();
+        else window.addEventListener("taneruDBReady", load, { once: true });
       }, []);
  
       const days = ["月", "火", "水", "木", "金", "土", "日"];
       const today = new Date().getDate();
       const recordedDays = [...new Set(entries.map(e => new Date(e.dateTime).getDate()))];
       const aiDays = [...new Set(aiLogs.map(l => new Date(l.dateTime).getDate()))];
- 
       const typeLabel = { rq: "🔬 RQ提案", keywords: "🔍 キーワード提案", literature: "📚 関連文献" };
- 
-      // 選択した日の日記とAIログ
       const dayEntries = selectedDay ? entries.filter(e => new Date(e.dateTime).getDate() === selectedDay) : [];
       const dayAILogs = selectedDay ? aiLogs.filter(l => new Date(l.dateTime).getDate() === selectedDay) : [];
  
@@ -225,16 +350,13 @@
         <div>
           <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>実習カレンダー</div>
           <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>記録した日が色づきます</div>
- 
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
               <span style={{ fontSize: 15, fontWeight: "bold", color: C.ink }}>{new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long" })}</span>
               <span style={{ background: C.greenMid, color: "#fff", borderRadius: 20, padding: "2px 12px", fontSize: 10, fontWeight: "bold" }}>実習中</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
-              {days.map(d => (
-                <div key={d} style={{ textAlign: "center", fontSize: 10, color: C.inkLight, padding: "4px 0" }}>{d}</div>
-              ))}
+              {days.map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, color: C.inkLight, padding: "4px 0" }}>{d}</div>)}
               {Array.from({ length: 30 }, (_, i) => i + 1).map(d => {
                 const isRec = recordedDays.includes(d);
                 const isAI = aiDays.includes(d);
@@ -249,22 +371,14 @@
               })}
             </div>
             <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.inkLight }}>
-                <div style={{ width: 10, height: 10, borderRadius: 3, background: C.greenLight + "55" }} />日記あり
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.inkLight }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold }} />AI提案あり
-              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.inkLight }}><div style={{ width: 10, height: 10, borderRadius: 3, background: C.greenLight + "55" }} />日記あり</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.inkLight }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold }} />AI提案あり</div>
             </div>
           </div>
  
-          {/* 選択した日の詳細 */}
           {selectedDay && (
             <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: "bold", color: C.ink, marginBottom: 12 }}>
-                {new Date().getMonth() + 1}月{selectedDay}日の記録
-              </div>
- 
+              <div style={{ fontSize: 13, fontWeight: "bold", color: C.ink, marginBottom: 12 }}>{new Date().getMonth() + 1}月{selectedDay}日の記録</div>
               {dayEntries.length > 0 ? (
                 <div>
                   <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📝 日記（{dayEntries.length}件）</div>
@@ -276,10 +390,7 @@
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 12 }}>日記の記録はありません</div>
-              )}
- 
+              ) : <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 12 }}>日記の記録はありません</div>}
               {dayAILogs.length > 0 && (
                 <div style={{ marginTop: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: "bold", color: C.gold, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>🤖 AIからの提案（{dayAILogs.length}件）</div>
@@ -290,10 +401,6 @@
                     </div>
                   ))}
                 </div>
-              )}
- 
-              {dayEntries.length === 0 && dayAILogs.length === 0 && (
-                <div style={{ fontSize: 12, color: C.inkLight, textAlign: "center", padding: "10px 0" }}>この日の記録はありません</div>
               )}
             </div>
           )}
@@ -338,24 +445,17 @@
       const [literatures, setLiteratures] = useState([]);
       const [promoted, setPromoted] = useState([]);
       const [aiLoading, setAiLoading] = useState("");
-      const [aiRQResult, setAiRQResult] = useState("");
-      const [aiKeywords, setAiKeywords] = useState("");
-      const [aiLiterature, setAiLiterature] = useState("");
+      const [aiRQResult, setAiRQResult] = useState(localStorage.getItem("taneru_ai_rq_result") || "");
+      const [aiKeywords, setAiKeywords] = useState(localStorage.getItem("taneru_ai_keywords_result") || "");
+      const [aiLiterature, setAiLiterature] = useState(localStorage.getItem("taneru_ai_literature_result") || "");
  
       useEffect(() => {
         const rq = localStorage.getItem("taneru_rq");
-        if (rq) { const p = JSON.parse(rq); setRqText(p.text || ["",""]); setRqStatus(p.status || ["仮","仮"]); }
+        if (rq) { const p = JSON.parse(rq); setRqText(p.text||["",""]); setRqStatus(p.status||["仮","仮"]); }
         const lit = localStorage.getItem("taneru_literatures");
         if (lit) setLiteratures(JSON.parse(lit));
         const pro = localStorage.getItem("taneru_promoted");
         if (pro) setPromoted(JSON.parse(pro));
-        // AIの提案をlocalStorageから復元
-        const rqRes = localStorage.getItem("taneru_ai_rq_result");
-        if (rqRes) setAiRQResult(rqRes);
-        const kwRes = localStorage.getItem("taneru_ai_keywords_result");
-        if (kwRes) setAiKeywords(kwRes);
-        const litRes = localStorage.getItem("taneru_ai_literature_result");
-        if (litRes) setAiLiterature(litRes);
       }, []);
  
       const saveRQ = () => {
@@ -392,56 +492,49 @@
         localStorage.setItem("taneru_promoted", JSON.stringify(updated));
       };
  
-      // ① RQ提案
       const handleAIRQ = async () => {
-        const entries = loadEntries();
+        const entries = loadEntriesLocal();
         if (entries.length === 0) { alert("まず日記を記録してください。"); return; }
         setAiLoading("rq");
-        const entriesText = entries.slice(0, 20).map(e => `${e.date}：${e.event || ""}　${e.question || ""}`).join("\n");
+        const entriesText = entries.slice(0, 20).map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n");
         const prompt = `あなたは教育学の研究支援者です。以下は教育実習生の日記の記録です。この記録をもとに、実地研究・課題研究のリサーチクエスチョン候補を3つ提案してください。それぞれ1〜2文で具体的に書いてください。\n\n【日記の記録】\n${entriesText}\n\n【出力形式】\n①〜\n②〜\n③〜`;
         const result = await callAI(prompt);
         if (result) {
           setAiRQResult(result);
           localStorage.setItem("taneru_ai_rq_result", result);
-          saveAILog("rq", result);
+          try { await fsAddAILog({ type: "rq", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {}
         }
         setAiLoading("");
       };
  
-      // ② キーワード提案
       const handleAIKeywords = async () => {
-        const entries = loadEntries();
+        const entries = loadEntriesLocal();
         const pro = promoted.filter(p => p.tab === tab);
         if (entries.length === 0 && pro.length === 0) { alert("まず日記を記録してください。"); return; }
         setAiLoading("keywords");
-        const entriesText = pro.length > 0
-          ? pro.map(e => `${e.date}：${e.event || ""}　${e.question || ""}`).join("\n")
-          : entries.slice(0, 10).map(e => `${e.date}：${e.event || ""}　${e.question || ""}`).join("\n");
+        const entriesText = pro.length > 0 ? pro.map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n") : entries.slice(0, 10).map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n");
         const prompt = `あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。この内容をもとに、CiNiiやGoogle Scholarで文献検索するときに使える検索キーワードを5つ提案してください。日本語と英語を混ぜても構いません。\n\n【気づきの記録】\n${entriesText}\n\n【出力形式】\n①〜\n②〜\n③〜\n④〜\n⑤〜`;
         const result = await callAI(prompt);
         if (result) {
           setAiKeywords(result);
           localStorage.setItem("taneru_ai_keywords_result", result);
-          saveAILog("keywords", result);
+          try { await fsAddAILog({ type: "keywords", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {}
         }
         setAiLoading("");
       };
  
-      // ③ 関連文献
       const handleAILiterature = async () => {
         const pro = promoted.filter(p => p.tab === tab);
-        const entries = loadEntries();
+        const entries = loadEntriesLocal();
         if (entries.length === 0 && pro.length === 0) { alert("まず日記を記録してください。"); return; }
         setAiLoading("literature");
-        const entriesText = pro.length > 0
-          ? pro.map(e => `${e.event || ""}　${e.question || ""}`).join("\n")
-          : entries.slice(0, 10).map(e => `${e.event || ""}　${e.question || ""}`).join("\n");
+        const entriesText = pro.length > 0 ? pro.map(e => `${e.event||""}　${e.question||""}`).join("\n") : entries.slice(0, 10).map(e => `${e.event||""}　${e.question||""}`).join("\n");
         const prompt = `あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。この内容に関連する実在する学術文献や書籍を3件紹介してください。必ず実在するものだけを紹介し、著者・タイトル・出版年・簡単な説明を書いてください。\n\n【気づきの記録】\n${entriesText}\n\n【出力形式】\n①著者（出版年）「タイトル」\n→ 説明\n\n②著者（出版年）「タイトル」\n→ 説明\n\n③著者（出版年）「タイトル」\n→ 説明`;
         const result = await callAI(prompt);
         if (result) {
           setAiLiterature(result);
           localStorage.setItem("taneru_ai_literature_result", result);
-          saveAILog("literature", result);
+          try { await fsAddAILog({ type: "literature", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {}
         }
         setAiLoading("");
       };
@@ -454,14 +547,11 @@
         <div>
           <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>研究ノート</div>
           <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 16 }}>気づきと文献を研究へつなげる</div>
- 
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
             {tabLabels.map((label, i) => (
               <button key={label} onClick={() => setTab(i)} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1.5px solid ${tab === i ? C.green : C.bgDeep}`, background: tab === i ? C.green : "transparent", color: tab === i ? C.cream : C.inkLight, fontFamily: "'Georgia', serif", fontSize: 13, cursor: "pointer" }}>{label}</button>
             ))}
           </div>
- 
-          {/* RQ */}
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.gold}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase" }}>🔬 リサーチクエスチョン</div>
@@ -470,9 +560,7 @@
             <textarea value={rqText[tab]} onChange={(e) => { const u = [...rqText]; u[tab] = e.target.value; setRqText(u); }} rows={3} placeholder="例：待ち時間における子どもの自発的行動を促す環境要因とは何か？" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
               <button onClick={saveRQ} style={{ flex: 1, background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>保存する</button>
-              <button onClick={handleAIRQ} disabled={aiLoading === "rq"} style={{ flex: 1, background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>
-                {aiLoading === "rq" ? "考え中..." : "🤖 RQを提案してもらう"}
-              </button>
+              <button onClick={handleAIRQ} disabled={aiLoading === "rq"} style={{ flex: 1, background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "rq" ? "考え中..." : "🤖 RQを提案してもらう"}</button>
             </div>
             {aiRQResult && (
               <div style={{ background: C.bg, borderRadius: 12, padding: "14px", marginTop: 12, fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
@@ -482,8 +570,6 @@
               </div>
             )}
           </div>
- 
-          {/* 昇格した気づき */}
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📌 昇格した気づき</div>
             {filteredPromoted.length > 0 ? filteredPromoted.map((entry) => (
@@ -495,12 +581,8 @@
                 {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{entry.event}</div>}
                 {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.6, fontStyle: "italic" }}>💡 {entry.question}</div>}
               </div>
-            )) : (
-              <div style={{ textAlign: "center", padding: "20px 0", color: C.inkLight, fontSize: 13 }}>ホームの記録から「🔬 研究に使う」で追加できます</div>
-            )}
+            )) : <div style={{ textAlign: "center", padding: "20px 0", color: C.inkLight, fontSize: 13 }}>ホームの記録から「🔬 研究に使う」で追加できます</div>}
           </div>
- 
-          {/* 文献メモ */}
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📚 文献メモ</div>
             <div style={{ marginBottom: 14 }}>
@@ -523,9 +605,7 @@
               </div>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-              <button onClick={handleAIKeywords} disabled={aiLoading === "keywords"} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>
-                {aiLoading === "keywords" ? "考え中..." : "🔍 検索キーワードを提案してもらう"}
-              </button>
+              <button onClick={handleAIKeywords} disabled={aiLoading === "keywords"} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "keywords" ? "考え中..." : "🔍 検索キーワードを提案してもらう"}</button>
               {aiKeywords && (
                 <div style={{ background: C.bg, borderRadius: 12, padding: "14px", fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
                   <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>🔍 おすすめ検索キーワード</div>
@@ -533,9 +613,7 @@
                   <button onClick={() => { setAiKeywords(""); localStorage.removeItem("taneru_ai_keywords_result"); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
                 </div>
               )}
-              <button onClick={handleAILiterature} disabled={aiLoading === "literature"} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>
-                {aiLoading === "literature" ? "検索中..." : "📚 関連文献を探す"}
-              </button>
+              <button onClick={handleAILiterature} disabled={aiLoading === "literature"} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "literature" ? "検索中..." : "📚 関連文献を探す"}</button>
               {aiLiterature && (
                 <div style={{ background: C.bg, borderRadius: 12, padding: "14px", fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
                   <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>📚 関連文献の候補</div>
@@ -558,7 +636,7 @@
       const handleClear = () => {
         if (!window.confirm("すべての記録を削除しますか？この操作は元に戻せません。")) return;
         ["taneru_entries","taneru_rq","taneru_literatures","taneru_promoted","taneru_ai_logs","taneru_ai_rq_result","taneru_ai_keywords_result","taneru_ai_literature_result"].forEach(k => localStorage.removeItem(k));
-        alert("記録を削除しました。");
+        alert("ローカルの記録を削除しました。Firebaseのデータは残っています。");
       };
  
       const downloadText = (filename, content) => {
@@ -569,16 +647,12 @@
         URL.revokeObjectURL(url);
       };
  
-      const exportDiary = () => {
-        const entries = loadEntries();
+      const exportDiary = async () => {
+        let entries = [];
+        try { entries = await fsGetEntries(); } catch(e) { entries = loadEntriesLocal(); }
         const start = exportStart ? new Date(exportStart + "T00:00:00") : null;
         const end = exportEnd ? new Date(exportEnd + "T23:59:59") : null;
-        const filtered = entries.filter(e => {
-          const d = new Date(e.dateTime);
-          if (start && d < start) return false;
-          if (end && d > end) return false;
-          return true;
-        });
+        const filtered = entries.filter(e => { const d = new Date(e.dateTime); if (start && d < start) return false; if (end && d > end) return false; return true; });
         if (filtered.length === 0) { alert("指定した期間に記録がありません。"); return; }
         const dateLabel = exportStart || exportEnd ? `${exportStart || "最初"} 〜 ${exportEnd || "最新"}` : "全期間";
         let text = "===========================\nTaneru｜日記の記録\n";
@@ -614,8 +688,9 @@
         downloadText("taneru_research.txt", text);
       };
  
-      const exportAll = () => {
-        const entries = loadEntries();
+      const exportAll = async () => {
+        let entries = [];
+        try { entries = await fsGetEntries(); } catch(e) { entries = loadEntriesLocal(); }
         const start = exportStart ? new Date(exportStart + "T00:00:00") : null;
         const end = exportEnd ? new Date(exportEnd + "T23:59:59") : null;
         const filtered = entries.filter(e => { const d = new Date(e.dateTime); if (start && d < start) return false; if (end && d > end) return false; return true; });
@@ -676,11 +751,15 @@
             </div>
           </div>
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🗄 データ管理</div>
-            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>記録はこのMacのブラウザに保存されています。</div>
-            <button onClick={handleClear} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>すべての記録を削除する</button>
+            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>☁️ クラウド同期</div>
+            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7 }}>日記の記録はFirebase（クラウド）に自動保存されます。MacでもiPhoneでも同じデータにアクセスできます。</div>
           </div>
-          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.1 — 気づきから研究へ 🌱</div>
+          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🗄 データ管理</div>
+            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>ローカルのキャッシュデータを削除します。Firebaseのデータは残ります。</div>
+            <button onClick={handleClear} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>ローカルキャッシュを削除する</button>
+          </div>
+          <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.2 — 気づきから研究へ 🌱</div>
         </div>
       );
     }
