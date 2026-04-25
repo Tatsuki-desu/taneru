@@ -282,17 +282,21 @@
       const [question, setQuestion] = useState(entry.question || "");
       const [feedback, setFeedback] = useState(entry.feedback || "");
       const [tags, setTags] = useState(entry.tags || []);
+      const [keywordTags, setKeywordTags] = useState(entry.keywordTags || []);
+      const [tagInput, setTagInput] = useState("");
       const [saving, setSaving] = useState(false);
  
       const toggleTag = (t) => setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
       const emotionTags = ["😮 驚き", "😟 モヤモヤ", "💡 ひらめき", "❓ 疑問"];
+      const addKwTag = () => { const t = tagInput.trim(); if (t && !keywordTags.includes(t)) setKeywordTags(prev => [...prev, t]); setTagInput(""); };
+      const removeKwTag = (t) => setKeywordTags(prev => prev.filter(x => x !== t));
  
       const handleSave = async () => {
         setSaving(true);
         const updated = {
           date: new Date(date + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
           dateTime: new Date(date + "T00:00:00").toISOString(),
-          event: event.trim(), question: question.trim(), feedback: feedback.trim(), tags,
+          event: event.trim(), question: question.trim(), feedback: feedback.trim(), tags, keywordTags,
         };
         await onSave(entry.id, updated);
         setSaving(false);
@@ -330,6 +334,22 @@
                 ))}
               </div>
             </div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>🏷 キーワードタグ</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addKwTag()} placeholder="タグを入力してEnter..." style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
+                <button onClick={addKwTag} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 12px", fontSize: 12, cursor: "pointer" }}>追加</button>
+              </div>
+              {keywordTags.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {keywordTags.map(t => (
+                    <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, fontSize: 11, background: C.green + "22", color: C.green, border: `1px solid ${C.green}44` }}>
+                      {t}<span onClick={() => removeKwTag(t)} style={{ cursor: "pointer", fontSize: 13, color: C.inkLight }}>×</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={onClose} style={{ flex: 1, background: "transparent", color: C.inkLight, border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif" }}>キャンセル</button>
               <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "12px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{saving ? "保存中..." : "保存する"}</button>
@@ -357,6 +377,10 @@
       const [question, setQuestion] = useState(draft?.question || "");
       const [feedback, setFeedback] = useState(draft?.feedback || "");
       const [tags, setTags] = useState(draft?.tags || []);
+      const [keywordTags, setKeywordTags] = useState(draft?.keywordTags || []);
+      const [tagInput, setTagInput] = useState(draft?.tagInput || "");
+      const [tagFilter, setTagFilter] = useState("");
+      const [aiTagLoading, setAiTagLoading] = useState(false);
       const [entries, setEntries] = useState([]);
       const [saved, setSaved] = useState(false);
       const [search, setSearch] = useState("");
@@ -366,9 +390,9 @@
  
       // ② ドラフトを自動保存
       useEffect(() => {
-        const d = { selectedDate, event, question, feedback, tags };
+        const d = { selectedDate, event, question, feedback, tags, keywordTags, tagInput };
         localStorage.setItem(DRAFT_KEY(), JSON.stringify(d));
-      }, [selectedDate, event, question, feedback, tags]);
+      }, [selectedDate, event, question, feedback, tags, keywordTags, tagInput]);
  
       useEffect(() => {
         const load = async () => {
@@ -382,6 +406,7 @@
       const clearDraft = () => {
         localStorage.removeItem(DRAFT_KEY());
         setEvent(""); setQuestion(""); setFeedback(""); setTags([]);
+        setKeywordTags([]); setTagInput("");
         setSelectedDate(todayStr);
       };
  
@@ -428,6 +453,7 @@
           date: new Date(selectedDate + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
           dateTime: new Date(selectedDate + "T00:00:00").toISOString(),
           event: event.trim(), question: question.trim(), tags, feedback: feedback.trim(),
+          keywordTags: keywordTags,
         };
         setSaved(true);
         try {
@@ -446,6 +472,9 @@
       // ⑤ デフォルトは今日の記録のみ、検索時は全件
       const todayDateStr = new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
       const filteredEntries = entries.filter(e => {
+        if (tagFilter) {
+          return (e.keywordTags||[]).includes(tagFilter);
+        }
         if (search.trim()) {
           const kw = search.trim().toLowerCase();
           return (e.event||"").toLowerCase().includes(kw) || (e.question||"").toLowerCase().includes(kw) || (e.feedback||"").toLowerCase().includes(kw);
@@ -453,10 +482,33 @@
         const recentDates = [...new Set(entries.map(e => e.date))].slice(0, 3);
 return recentDates.includes(e.date);
       });
-      const showingAll = search.trim() !== "";
+      const showingAll = search.trim() !== "" || tagFilter !== "";
  
       const emotionTags = ["😮 驚き", "😟 モヤモヤ", "💡 ひらめき", "❓ 疑問"];
       const hasDraft = event.trim() || question.trim() || feedback.trim();
+ 
+      // ③ キーワードタグ：手動追加
+      const addKeywordTag = () => {
+        const t = tagInput.trim();
+        if (t && !keywordTags.includes(t)) setKeywordTags(prev => [...prev, t]);
+        setTagInput("");
+      };
+      const removeKeywordTag = (t) => setKeywordTags(prev => prev.filter(x => x !== t));
+ 
+      // ③ キーワードタグ：AI提案
+      const handleAITags = async () => {
+        if (!event.trim() && !question.trim()) { alert("まず出来事や気づきを入力してください。"); return; }
+        setAiTagLoading(true);
+        const result = await callAI(`以下の教育実習生の気づきの記録に対して、内容を表すキーワードタグを3〜5個提案してください。タグは短い名詞や動詞で、検索・分類しやすいものにしてください。\n\n【出来事】${event}\n【気づき】${question}\n\n【出力形式】タグのみをカンマ区切りで出力してください。例：子どもの発言,授業構成,教師の介入`);
+        if (result) {
+          const newTags = result.split(/[,、，]/).map(t => t.trim()).filter(t => t && t.length < 20);
+          setKeywordTags(prev => [...new Set([...prev, ...newTags])]);
+        }
+        setAiTagLoading(false);
+      };
+ 
+      // ③ 全記録から使われているキーワードタグを収集
+      const allKeywordTags = [...new Set(entries.flatMap(e => e.keywordTags || []))];
  
       return (
         <div>
@@ -506,11 +558,45 @@ return recentDates.includes(e.date);
             </button>
           </div>
  
+          {/* ③ キーワードタグ */}
+          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "16px 20px", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>🏷 キーワードタグ</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addKeywordTag()} placeholder="タグを入力してEnter..." style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
+              <button onClick={addKeywordTag} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>追加</button>
+            </div>
+            {keywordTags.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                {keywordTags.map(t => (
+                  <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, fontSize: 12, background: C.green + "22", color: C.green, border: `1px solid ${C.green}44` }}>
+                    {t}
+                    <span onClick={() => removeKeywordTag(t)} style={{ cursor: "pointer", fontSize: 14, lineHeight: 1, color: C.inkLight }}>×</span>
+                  </span>
+                ))}
+              </div>
+            )}
+            <button onClick={handleAITags} disabled={aiTagLoading} style={{ background: "transparent", color: C.greenMid, border: `1.5px solid ${C.greenMid}`, borderRadius: 10, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>
+              {aiTagLoading ? "提案中..." : "🤖 AIにタグを提案してもらう"}
+            </button>
+          </div>
+ 
+          {/* ③ タグフィルター */}
+          {allKeywordTags.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 6 }}>🏷 タグで絞り込む</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {allKeywordTags.map(t => (
+                  <span key={t} onClick={() => { setTagFilter(prev => prev === t ? "" : t); setSearch(""); }} style={{ display: "inline-block", padding: "4px 12px", borderRadius: 20, fontSize: 12, cursor: "pointer", background: tagFilter === t ? C.green : C.green + "18", color: tagFilter === t ? "#fff" : C.green, border: `1px solid ${C.green}33`, transition: "all 0.15s" }}>{t}</span>
+                ))}
+              </div>
+            </div>
+          )}
+ 
           {/* 検索欄 */}
           <div style={{ marginBottom: 12 }}>
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 キーワードで検索（全件表示）..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.cream, color: C.ink, outline: "none" }} />
             <div style={{ fontSize: 11, color: C.inkLight, marginTop: 6, textAlign: "right" }}>
-              {showingAll ? `「${search}」の検索結果：${filteredEntries.length}件` : `直近3日の記録（${filteredEntries.length}件）`}
+              {tagFilter ? `🏷「${tagFilter}」タグの記録：${filteredEntries.length}件` : showingAll ? `「${search}」の検索結果：${filteredEntries.length}件` : `直近3日の記録（${filteredEntries.length}件）`}
             </div>
           </div>
  
@@ -534,6 +620,13 @@ return recentDates.includes(e.date);
                 {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 4, whiteSpace: "pre-wrap" }}>{entry.event}</div>}
                 {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.7, fontStyle: "italic", marginBottom: 4, whiteSpace: "pre-wrap" }}>💡 {entry.question}</div>}
                 {entry.feedback && <div style={{ fontSize: 13, color: C.gold, lineHeight: 1.7, fontStyle: "italic", marginBottom: 4, whiteSpace: "pre-wrap" }}>👨‍🏫 {entry.feedback}</div>}
+                {entry.keywordTags && entry.keywordTags.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                    {entry.keywordTags.map(t => (
+                      <span key={t} onClick={() => { setTagFilter(prev => prev === t ? "" : t); setSearch(""); }} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 20, fontSize: 10, background: C.green + "18", color: C.green, border: `1px solid ${C.green}33`, cursor: "pointer" }}>{t}</span>
+                    ))}
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                   <button onClick={() => handlePromote(entry)} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 10, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'Georgia', serif" }}>🔬 研究に使う</button>
                   <button onClick={() => handleShare(entry)} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 10, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'Georgia', serif" }}>📋 掲示板に共有</button>
@@ -651,9 +744,11 @@ return recentDates.includes(e.date);
         setAiLoading("");
       };
  
+      const [researchTagFilter, setResearchTagFilter] = useState("");
       const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
       const filteredLits = literatures.filter(l => l.tab === tab);
-      const filteredPromoted = promoted.filter(p => p.tab === tab);
+      const allPromotedKwTags = [...new Set(promoted.filter(p => p.tab === tab).flatMap(p => p.keywordTags || []))];
+      const filteredPromoted = promoted.filter(p => p.tab === tab && (researchTagFilter === "" || (p.keywordTags||[]).includes(researchTagFilter)));
  
       return (
         <div>
@@ -689,7 +784,14 @@ return recentDates.includes(e.date);
                 )}
               </div>
               <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📌 昇格した気づき</div>
+                <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📌 昇格した気づき</div>
+                {allPromotedKwTags.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                    {allPromotedKwTags.map(t => (
+                      <span key={t} onClick={() => setResearchTagFilter(prev => prev === t ? "" : t)} style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, cursor: "pointer", background: researchTagFilter === t ? C.green : C.green + "18", color: researchTagFilter === t ? "#fff" : C.green, border: `1px solid ${C.green}33` }}>{t}</span>
+                    ))}
+                  </div>
+                )}
                 {filteredPromoted.length > 0 ? (
                   <div>
                     {filteredPromoted.map((entry) => (
@@ -700,6 +802,13 @@ return recentDates.includes(e.date);
                         </div>
                         {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.event}</div>}
                         {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.6, fontStyle: "italic", whiteSpace: "pre-wrap" }}>💡 {entry.question}</div>}
+                        {entry.keywordTags && entry.keywordTags.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                            {entry.keywordTags.map(t => (
+                              <span key={t} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 20, fontSize: 10, background: C.green + "18", color: C.green, border: `1px solid ${C.green}33` }}>{t}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                     <button onClick={handleAIDirection} disabled={aiLoading === "direction"} style={{ width: "100%", background: aiLoading === "direction" ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", marginTop: 4 }}>
@@ -881,7 +990,7 @@ return recentDates.includes(e.date);
   const [selectedDay, setSelectedDay] = useState(null);
   const dateRefs = React.useRef({});
   const scrollRef = React.useRef(null);
-
+ 
   useEffect(() => {
     const load = async () => {
       try { const data = await fsGetEntries(); setEntries(data); } catch(e) { setEntries(loadEntriesLocal()); }
@@ -889,7 +998,7 @@ return recentDates.includes(e.date);
     };
     load();
   }, []);
-
+ 
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
@@ -897,18 +1006,18 @@ return recentDates.includes(e.date);
   const firstDayOfWeek = new Date(year, month, 1).getDay();
   const offset = firstDayOfWeek;
   const today = now.getDate();
-
+ 
   const recordedDays = [...new Set(entries.map(e => new Date(e.dateTime).getDate()))];
   const aiDays = [...new Set(aiLogs.map(l => new Date(l.dateTime).getDate()))];
   const typeLabel = { rq: "🔬 RQ提案", keywords: "🔍 キーワード提案", literature: "📚 関連文献", direction: "🔭 研究の方向性" };
-
+ 
   const entriesByDate = {};
   entries.forEach(e => {
     const d = new Date(e.dateTime).getDate();
     if (!entriesByDate[d]) entriesByDate[d] = [];
     entriesByDate[d].push(e);
   });
-
+ 
   const handleDayClick = (d) => {
     setSelectedDay(d === selectedDay ? null : d);
     if (recordedDays.includes(d) && dateRefs.current[d] && scrollRef.current) {
@@ -922,10 +1031,10 @@ return recentDates.includes(e.date);
       }, 100);
     }
   };
-
+ 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 160px)" }}>
-
+ 
       {/* カレンダー（固定） */}
       <div style={{ flexShrink: 0, background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "16px 18px", marginBottom: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
@@ -953,7 +1062,7 @@ return recentDates.includes(e.date);
           <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.inkLight }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold }} />AI提案あり</div>
         </div>
       </div>
-
+ 
       {/* 記録一覧（スクロール） */}
       <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
         {entries.length === 0 ? (
