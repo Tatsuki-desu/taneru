@@ -553,32 +553,33 @@ return recentDates.includes(e.date);
                 ))}
               </div>
             </div>
+            {/* ③ キーワードタグ（フォーム内） */}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>🏷 キーワードタグ（任意）</div>
+              <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 8 }}>この記録に関連するキーワードをタグとして追加できます。後で絞り込み検索に使えます。</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeywordTag())} placeholder="例：子どもの発言、授業構成..." style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
+                <button onClick={addKeywordTag} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", flexShrink: 0 }}>追加</button>
+              </div>
+              {keywordTags.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                  {keywordTags.map(t => (
+                    <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, fontSize: 12, background: C.green + "22", color: C.green, border: `1px solid ${C.green}44` }}>
+                      {t}
+                      <span onClick={() => removeKeywordTag(t)} style={{ cursor: "pointer", fontSize: 14, lineHeight: 1, color: C.inkLight }}>×</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <button onClick={handleAITags} disabled={aiTagLoading} style={{ background: "transparent", color: C.greenMid, border: `1.5px solid ${C.greenMid}`, borderRadius: 10, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>
+                {aiTagLoading ? "提案中..." : "🤖 AIにキーワードを提案してもらう"}
+              </button>
+            </div>
             <button onClick={handleSave} style={{ background: saved ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px 24px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif", fontStyle: "italic", width: "100%", marginTop: 16, transition: "background 0.2s" }}>
               {saved ? "保存しました！✓" : "この気づきを記録する 🌱"}
             </button>
           </div>
  
-          {/* ③ キーワードタグ */}
-          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "16px 20px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>🏷 キーワードタグ</div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-              <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addKeywordTag()} placeholder="タグを入力してEnter..." style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
-              <button onClick={addKeywordTag} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>追加</button>
-            </div>
-            {keywordTags.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-                {keywordTags.map(t => (
-                  <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, fontSize: 12, background: C.green + "22", color: C.green, border: `1px solid ${C.green}44` }}>
-                    {t}
-                    <span onClick={() => removeKeywordTag(t)} style={{ cursor: "pointer", fontSize: 14, lineHeight: 1, color: C.inkLight }}>×</span>
-                  </span>
-                ))}
-              </div>
-            )}
-            <button onClick={handleAITags} disabled={aiTagLoading} style={{ background: "transparent", color: C.greenMid, border: `1.5px solid ${C.greenMid}`, borderRadius: 10, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>
-              {aiTagLoading ? "提案中..." : "🤖 AIにタグを提案してもらう"}
-            </button>
-          </div>
  
           {/* ③ タグフィルター */}
           {allKeywordTags.length > 0 && (
