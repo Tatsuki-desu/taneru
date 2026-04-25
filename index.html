@@ -450,11 +450,8 @@
           const kw = search.trim().toLowerCase();
           return (e.event||"").toLowerCase().includes(kw) || (e.question||"").toLowerCase().includes(kw) || (e.feedback||"").toLowerCase().includes(kw);
         }
-        const entryDate = new Date(e.dateTime);
-const threeDaysAgo = new Date();
-threeDaysAgo.setDate(threeDaysAgo.getDate() - 2);
-threeDaysAgo.setHours(0, 0, 0, 0);
-return entryDate >= threeDaysAgo;
+        const recentDates = [...new Set(entries.map(e => e.date))].slice(0, 3);
+return recentDates.includes(e.date);
       });
       const showingAll = search.trim() !== "";
  
