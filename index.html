@@ -420,12 +420,21 @@
       const toggleTag = (t) => setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
  
       const handlePromote = async (entry) => {
-        const alreadyPromoted = promotedEntries.some(p => p.id === entry.id);
-        if (alreadyPromoted) {
-          alert("この記録はすでに研究ノートに追加されています。\n研究ノート画面で確認できます。");
+        const promotedTabs = promotedEntries.filter(p => p.id === entry.id).map(p => p.tab);
+        if (promotedTabs.includes(0) && promotedTabs.includes(1)) {
+          alert("この記録はすでに実地研究Ⅱと課題研究Ⅱの両方に追加されています。\n研究ノート画面で確認できます。");
           return;
         }
-        const tab = window.confirm("実地研究Ⅱに追加しますか？\nOK → 実地研究Ⅱ\nキャンセル → 課題研究Ⅱ") ? 0 : 1;
+        let tab;
+        if (promotedTabs.includes(0)) {
+          if (!window.confirm("この記録はすでに実地研究Ⅱに追加されています。\n課題研究Ⅱにも追加しますか？")) return;
+          tab = 1;
+        } else if (promotedTabs.includes(1)) {
+          if (!window.confirm("この記録はすでに課題研究Ⅱに追加されています。\n実地研究Ⅱにも追加しますか？")) return;
+          tab = 0;
+        } else {
+          tab = window.confirm("実地研究Ⅱに追加しますか？\nOK → 実地研究Ⅱ\nキャンセル → 課題研究Ⅱ") ? 0 : 1;
+        }
         try {
           await fsAddPromoted({ ...entry, tab, promotedAt: new Date().toISOString() });
           setPromotedEntries(prev => [...prev, { ...entry, tab, promotedAt: new Date().toISOString() }]);
