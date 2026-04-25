@@ -450,7 +450,11 @@
           const kw = search.trim().toLowerCase();
           return (e.event||"").toLowerCase().includes(kw) || (e.question||"").toLowerCase().includes(kw) || (e.feedback||"").toLowerCase().includes(kw);
         }
-        return e.date === todayDateStr;
+        const entryDate = new Date(e.dateTime);
+const threeDaysAgo = new Date();
+threeDaysAgo.setDate(threeDaysAgo.getDate() - 2);
+threeDaysAgo.setHours(0, 0, 0, 0);
+return entryDate >= threeDaysAgo;
       });
       const showingAll = search.trim() !== "";
  
@@ -509,7 +513,7 @@
           <div style={{ marginBottom: 12 }}>
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 キーワードで検索（全件表示）..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.cream, color: C.ink, outline: "none" }} />
             <div style={{ fontSize: 11, color: C.inkLight, marginTop: 6, textAlign: "right" }}>
-              {showingAll ? `「${search}」の検索結果：${filteredEntries.length}件` : `今日の記録（${filteredEntries.length}件）`}
+              {showingAll ? `「${search}」の検索結果：${filteredEntries.length}件` : `直近3日の記録（${filteredEntries.length}件）`}
             </div>
           </div>
  
