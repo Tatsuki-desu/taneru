@@ -382,6 +382,8 @@
       const [tagFilter, setTagFilter] = useState("");
       const [aiTagLoading, setAiTagLoading] = useState(false);
       const [entries, setEntries] = useState([]);
+      const [promotedEntries, setPromotedEntries] = useState([]);
+      const [sharedEntryIds, setSharedEntryIds] = useState([]);
       const [saved, setSaved] = useState(false);
       const [search, setSearch] = useState("");
       const [synced, setSynced] = useState(false);
@@ -396,7 +398,12 @@
  
       useEffect(() => {
         const load = async () => {
-          try { const data = await fsGetEntries(); setEntries(data); saveEntriesLocal(data); setSynced(true); }
+          try {
+            const data = await fsGetEntries(); setEntries(data); saveEntriesLocal(data); setSynced(true);
+            const pro = await fsGetPromoted(); setPromotedEntries(pro);
+            const posts = await fsGetPosts();
+            setSharedEntryIds(posts.filter(p => p.entryId).map(p => p.entryId));
+          }
           catch(e) { setEntries(loadEntriesLocal()); }
           setLoading(false);
         };
@@ -413,15 +420,25 @@
       const toggleTag = (t) => setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
  
       const handlePromote = async (entry) => {
+        const alreadyPromoted = promotedEntries.some(p => p.id === entry.id);
+        if (alreadyPromoted) {
+          alert("この記録はすでに研究ノートに追加されています。\n研究ノート画面で確認できます。");
+          return;
+        }
         const tab = window.confirm("実地研究Ⅱに追加しますか？\nOK → 実地研究Ⅱ\nキャンセル → 課題研究Ⅱ") ? 0 : 1;
-        try { await fsAddPromoted({ ...entry, tab, promotedAt: new Date().toISOString() }); alert("研究ノートに追加しました！"); }
+        try {
+          await fsAddPromoted({ ...entry, tab, promotedAt: new Date().toISOString() });
+          setPromotedEntries(prev => [...prev, { ...entry, tab, promotedAt: new Date().toISOString() }]);
+          alert("研究ノートに追加しました！");
+        }
         catch(e) { alert("追加に失敗しました。"); }
       };
  
       const handleShare = async (entry) => {
         if (!window.confirm("この気づきを掲示板に共有しますか？")) return;
         try {
-          await fsAddPost({ uid: getUID(), email: getEmail(), date: entry.date, dateTime: new Date().toISOString(), event: entry.event || "", question: entry.question || "", feedback: entry.feedback || "" });
+          await fsAddPost({ uid: getUID(), email: getEmail(), date: entry.date, dateTime: new Date().toISOString(), event: entry.event || "", question: entry.question || "", feedback: entry.feedback || "", entryId: entry.id });
+          setSharedEntryIds(prev => [...prev, entry.id]);
           alert("掲示板に共有しました！");
         } catch(e) { alert("共有に失敗しました。"); }
       };
@@ -607,14 +624,18 @@ return recentDates.includes(e.date);
             filteredEntries.map((entry) => (
               <div key={entry.id} style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.terra}`, borderRadius: 16, padding: "16px 20px", marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
+                    {promotedEntries.some(p => p.id === entry.id) && <span style={{ fontSize: 10, background: C.green + "22", color: C.green, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.green}44` }}>🔬 研究中</span>}
+                    {sharedEntryIds.includes(entry.id) && <span style={{ fontSize: 10, background: C.terra + "22", color: C.terra, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.terra}44` }}>📋 共有済</span>}
+                  </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     {entry.tags && entry.tags.map(t => (
                       <span key={t} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 20, fontSize: 10, background: C.terra + "22", color: C.terra }}>{t}</span>
                     ))}
                     {/* ① 編集ボタン */}
                     <button onClick={() => setEditEntry(entry)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14, padding: "0 4px" }}>✏️</button>
-                    <button onClick={() => handleDelete(entry.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14, padding: "0 4px" }}>🗑</button>
+                    <button onClick={() => handleDelete(entry.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14, padding: "0 4px" }}>❌</button>
                   </div>
                 </div>
                 {/* ⑥ 改行を反映 */}
@@ -799,7 +820,7 @@ return recentDates.includes(e.date);
                       <div key={entry.id} style={{ borderBottom: `1px solid ${C.bgDeep}`, paddingBottom: 12, marginBottom: 12 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                           <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
-                          <button onClick={() => handleDeletePromoted(entry.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>🗑</button>
+                          <button onClick={() => handleDeletePromoted(entry.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>❌</button>
                         </div>
                         {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entry.event}</div>}
                         {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.6, fontStyle: "italic", whiteSpace: "pre-wrap" }}>💡 {entry.question}</div>}
@@ -839,7 +860,7 @@ return recentDates.includes(e.date);
                       <div key={lit.id} style={{ background: C.bg, borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                           <div style={{ fontSize: 13, fontWeight: "bold", color: C.ink, flex: 1 }}>{lit.title}</div>
-                          <button onClick={() => handleDeleteLit(lit.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14, marginLeft: 8 }}>🗑</button>
+                          <button onClick={() => handleDeleteLit(lit.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14, marginLeft: 8 }}>❌</button>
                         </div>
                         {lit.note && <div style={{ fontSize: 12, color: C.inkLight, lineHeight: 1.6, marginTop: 4 }}>{lit.note}</div>}
                       </div>
@@ -953,7 +974,7 @@ return recentDates.includes(e.date);
                   </div>
                 </div>
                 {(post.uid === getUID() || isAdmin()) && (
-                  <button onClick={() => handleDeletePost(post.id, post.uid)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>🗑</button>
+                  <button onClick={() => handleDeletePost(post.id, post.uid)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>❌</button>
                 )}
               </div>
               {post.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 6, whiteSpace: "pre-wrap" }}>{post.event}</div>}
@@ -967,7 +988,7 @@ return recentDates.includes(e.date);
                     <div key={c.id} style={{ background: C.bg, borderRadius: 10, padding: "8px 12px", marginBottom: 8 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <div style={{ fontSize: 10, fontWeight: "bold", color: C.green }}>{getDisplayName(c.email)} · {c.date}</div>
-                        <button onClick={() => handleDeleteComment(post.id, c.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 12 }}>🗑</button>
+                        <button onClick={() => handleDeleteComment(post.id, c.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 12 }}>❌</button>
                       </div>
                       <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{c.text}</div>
                     </div>
