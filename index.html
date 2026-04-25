@@ -880,6 +880,7 @@ return recentDates.includes(e.date);
   const [aiLogs, setAiLogs] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
   const dateRefs = React.useRef({});
+  const scrollRef = React.useRef(null);
 
   useEffect(() => {
     const load = async () => {
@@ -901,7 +902,6 @@ return recentDates.includes(e.date);
   const aiDays = [...new Set(aiLogs.map(l => new Date(l.dateTime).getDate()))];
   const typeLabel = { rq: "🔬 RQ提案", keywords: "🔍 キーワード提案", literature: "📚 関連文献", direction: "🔭 研究の方向性" };
 
-  // 日付ごとに記録をグループ化
   const entriesByDate = {};
   entries.forEach(e => {
     const d = new Date(e.dateTime).getDate();
@@ -911,29 +911,29 @@ return recentDates.includes(e.date);
 
   const handleDayClick = (d) => {
     setSelectedDay(d === selectedDay ? null : d);
-    // 記録がある日ならスクロール
-    if (recordedDays.includes(d) && dateRefs.current[d]) {
+    if (recordedDays.includes(d) && dateRefs.current[d] && scrollRef.current) {
       setTimeout(() => {
-        dateRefs.current[d].scrollIntoView({ behavior: "smooth", block: "start" });
+        const container = scrollRef.current;
+        const target = dateRefs.current[d];
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const scrollTop = container.scrollTop + (targetRect.top - containerRect.top) - 10;
+        container.scrollTo({ top: scrollTop, behavior: "smooth" });
       }, 100);
     }
   };
 
-  const days = ["日", "月", "火", "水", "木", "金", "土"];
-
   return (
-    <div>
-      <div style={{ fontSize: 20, fontWeight: "bold", color: C.ink, fontStyle: "italic", marginBottom: 4 }}>実習カレンダー</div>
-      <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 20 }}>日付をタップするとその日の記録にジャンプします</div>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 160px)" }}>
 
-      {/* カレンダー */}
-      <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+      {/* ① カレンダー（固定） */}
+      <div style={{ flexShrink: 0, background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "16px 18px", marginBottom: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
           <span style={{ fontSize: 15, fontWeight: "bold", color: C.ink }}>{now.toLocaleDateString("ja-JP", { year: "numeric", month: "long" })}</span>
           <span style={{ background: C.greenMid, color: "#fff", borderRadius: 20, padding: "2px 12px", fontSize: 10, fontWeight: "bold" }}>実習中</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
-          {days.map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, color: C.inkLight, padding: "4px 0" }}>{d}</div>)}
+          {["日", "月", "火", "水", "木", "金", "土"].map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, color: C.inkLight, padding: "4px 0" }}>{d}</div>)}
           {Array.from({ length: offset }).map((_, i) => <div key={`empty-${i}`} />)}
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
             const isRec = recordedDays.includes(d);
@@ -948,46 +948,34 @@ return recentDates.includes(e.date);
             );
           })}
         </div>
-        <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+        <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.inkLight }}><div style={{ width: 10, height: 10, borderRadius: 3, background: C.greenLight + "55" }} />日記あり</div>
           <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.inkLight }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold }} />AI提案あり</div>
         </div>
       </div>
 
-      {/* 進捗 */}
-      <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📊 実習の進捗</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-          {[["記録した件数", `${entries.length}件`, C.green], ["気づき数", `${entries.filter(e => e.question).length}個`, C.terra], ["AI提案数", `${aiLogs.length}件`, C.gold]].map(([label, val, color]) => (
-            <div key={label} style={{ textAlign: "center", background: C.bg, borderRadius: 10, padding: "14px 0" }}>
-              <div style={{ fontSize: 20, fontWeight: "bold", color }}>{val}</div>
-              <div style={{ fontSize: 9, color: C.inkLight, marginTop: 4 }}>{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 全記録一覧（日付ごと） */}
-      {entries.length > 0 && (
-        <div>
-          <div style={{ fontSize: 14, fontWeight: "bold", color: C.ink, marginBottom: 14, fontStyle: "italic" }}>📖 全記録一覧</div>
-          {Object.keys(entriesByDate).sort((a, b) => b - a).map(day => {
+      {/* ② 気づきの記録一覧（スクロール） */}
+      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
+        {entries.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "30px 20px", color: C.inkLight }}>
+            <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.4 }}>🌱</div>
+            <div style={{ fontSize: 13 }}>まだ記録がありません</div>
+          </div>
+        ) : (
+          Object.keys(entriesByDate).sort((a, b) => b - a).map(day => {
             const dayEntries = entriesByDate[day];
             const dayAILogs = aiLogs.filter(l => new Date(l.dateTime).getDate() === parseInt(day));
             const isSelected = parseInt(day) === selectedDay;
             return (
-              <div key={day} ref={el => dateRefs.current[parseInt(day)] = el} style={{ marginBottom: 20 }}>
-                {/* 日付ヘッダー */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div style={{ background: isSelected ? C.terra : C.green, color: "#fff", borderRadius: 20, padding: "3px 14px", fontSize: 12, fontWeight: "bold" }}>
+              <div key={day} ref={el => dateRefs.current[parseInt(day)] = el} style={{ marginBottom: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <div style={{ background: isSelected ? C.terra : C.green, color: "#fff", borderRadius: 20, padding: "3px 14px", fontSize: 12, fontWeight: "bold", flexShrink: 0 }}>
                     {month + 1}月{day}日
                   </div>
                   <div style={{ flex: 1, height: 1, background: C.bgDeep }} />
                 </div>
-
-                {/* 日記 */}
                 {dayEntries.map(e => (
-                  <div key={e.id} style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.terra}`, borderRadius: 14, padding: "14px 18px", marginBottom: 10 }}>
+                  <div key={e.id} style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.terra}`, borderRadius: 14, padding: "12px 16px", marginBottom: 8 }}>
                     {e.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 4, whiteSpace: "pre-wrap" }}>{e.event}</div>}
                     {e.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.7, fontStyle: "italic", marginBottom: 4, whiteSpace: "pre-wrap" }}>💡 {e.question}</div>}
                     {e.feedback && <div style={{ fontSize: 13, color: C.gold, lineHeight: 1.7, fontStyle: "italic", whiteSpace: "pre-wrap" }}>👨‍🏫 {e.feedback}</div>}
@@ -998,19 +986,30 @@ return recentDates.includes(e.date);
                     )}
                   </div>
                 ))}
-
-                {/* AIログ */}
                 {dayAILogs.length > 0 && dayAILogs.map(log => (
-                  <div key={log.id} style={{ background: C.green + "11", border: `1px solid ${C.green}22`, borderRadius: 14, padding: "12px 16px", marginBottom: 10 }}>
+                  <div key={log.id} style={{ background: C.green + "11", border: `1px solid ${C.green}22`, borderRadius: 14, padding: "12px 16px", marginBottom: 8 }}>
                     <div style={{ fontSize: 10, fontWeight: "bold", color: C.green, marginBottom: 6 }}>{typeLabel[log.type] || "AI提案"}</div>
                     <div style={{ fontSize: 12, color: C.ink, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{log.content}</div>
                   </div>
                 ))}
               </div>
             );
-          })}
+          })
+        )}
+      </div>
+
+      {/* ③ 実習の進捗（固定） */}
+      <div style={{ flexShrink: 0, background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "14px 18px", marginTop: 10 }}>
+        <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>📊 実習の進捗</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+          {[["記録した件数", `${entries.length}件`, C.green], ["気づき数", `${entries.filter(e => e.question).length}個`, C.terra], ["AI提案数", `${aiLogs.length}件`, C.gold]].map(([label, val, color]) => (
+            <div key={label} style={{ textAlign: "center", background: C.bg, borderRadius: 10, padding: "12px 0" }}>
+              <div style={{ fontSize: 18, fontWeight: "bold", color }}>{val}</div>
+              <div style={{ fontSize: 9, color: C.inkLight, marginTop: 4 }}>{label}</div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
