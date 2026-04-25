@@ -897,7 +897,7 @@ return entryDate >= threeDaysAgo;
       // ⑧ カレンダーの日付ズレを修正
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0=日曜
-      const offset = (firstDayOfWeek + 6) % 7; // 月曜始まりに変換
+      const offset = firstDayOfWeek; // 日曜始まり
       const today = now.getDate();
  
       const recordedDays = [...new Set(entries.map(e => new Date(e.dateTime).getDate()))];
@@ -917,7 +917,7 @@ return entryDate >= threeDaysAgo;
               <span style={{ background: C.greenMid, color: "#fff", borderRadius: 20, padding: "2px 12px", fontSize: 10, fontWeight: "bold" }}>実習中</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
-              {days.map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, color: C.inkLight, padding: "4px 0" }}>{d}</div>)}
+              {["日", "月", "火", "水", "木", "金", "土"].map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, color: C.inkLight, padding: "4px 0" }}>{d}</div>)}
               {/* ⑧ オフセット用の空セル */}
               {Array.from({ length: offset }).map((_, i) => <div key={`empty-${i}`} />)}
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
