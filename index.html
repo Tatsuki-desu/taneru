@@ -879,7 +879,7 @@ return recentDates.includes(e.date);
   const [entries, setEntries] = useState([]);
   const [aiLogs, setAiLogs] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
-  const dateRefs = {};
+  const dateRefs = React.useRef({});
 
   useEffect(() => {
     const load = async () => {
@@ -912,9 +912,9 @@ return recentDates.includes(e.date);
   const handleDayClick = (d) => {
     setSelectedDay(d === selectedDay ? null : d);
     // 記録がある日ならスクロール
-    if (recordedDays.includes(d) && dateRefs[d]) {
+    if (recordedDays.includes(d) && dateRefs.current[d]) {
       setTimeout(() => {
-        dateRefs[d].scrollIntoView({ behavior: "smooth", block: "start" });
+        dateRefs.current[d].scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }
   };
@@ -976,7 +976,7 @@ return recentDates.includes(e.date);
             const dayAILogs = aiLogs.filter(l => new Date(l.dateTime).getDate() === parseInt(day));
             const isSelected = parseInt(day) === selectedDay;
             return (
-              <div key={day} ref={el => dateRefs[parseInt(day)] = el} style={{ marginBottom: 20 }}>
+              <div key={day} ref={el => dateRefs.current[parseInt(day)] = el} style={{ marginBottom: 20 }}>
                 {/* 日付ヘッダー */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                   <div style={{ background: isSelected ? C.terra : C.green, color: "#fff", borderRadius: 20, padding: "3px 14px", fontSize: 12, fontWeight: "bold" }}>
