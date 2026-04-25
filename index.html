@@ -998,21 +998,7 @@ return recentDates.includes(e.date);
         )}
       </div>
 
-      {/* ③ 実習の進捗（固定） */}
-      <div style={{ flexShrink: 0, background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "14px 18px", marginTop: 10 }}>
-        <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>📊 実習の進捗</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-          {[["記録した件数", `${entries.length}件`, C.green], ["気づき数", `${entries.filter(e => e.question).length}個`, C.terra], ["AI提案数", `${aiLogs.length}件`, C.gold]].map(([label, val, color]) => (
-            <div key={label} style={{ textAlign: "center", background: C.bg, borderRadius: 10, padding: "12px 0" }}>
-              <div style={{ fontSize: 18, fontWeight: "bold", color }}>{val}</div>
-              <div style={{ fontSize: 9, color: C.inkLight, marginTop: 4 }}>{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+      
  
     // ── 設定画面 ─────────────────────────────────
     function SettingsScreen({ onLogout, userEmail }) {
