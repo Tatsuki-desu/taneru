@@ -563,7 +563,7 @@ return recentDates.includes(e.date);
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📝 今日の出来事・観察（事実）</div>
             <textarea value={event} onChange={(e) => setEvent(e.target.value)} rows={4} placeholder="今日の実習で気になったこと、観察したこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             <div style={{ marginTop: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>💡 疑問・気づき</div>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>💡 疑問・気づき（考え）</div>
               <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} placeholder="「なぜ？」と思ったこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             <div style={{ marginTop: 14 }}>
@@ -1193,7 +1193,7 @@ return recentDates.includes(e.date);
         filtered.forEach(e => {
           text += `■ ${e.date}\n`;
           if (e.event) text += `【出来事・観察】\n${e.event}\n\n`;
-          if (e.question) text += `【疑問・気づき】\n${e.question}\n\n`;
+          if (e.question) text += `【疑問・気づき（考え）】\n${e.question}\n\n`;
           if (e.feedback) text += `【指導教員のフィードバック】\n${e.feedback}\n\n`;
           if (e.tags && e.tags.length > 0) text += `【タグ】${e.tags.join("　")}\n`;
           text += "---------------------------\n\n";
@@ -1241,7 +1241,7 @@ return recentDates.includes(e.date);
         filtered.forEach(e => {
           text += `■ ${e.date}\n`;
           if (e.event) text += `【出来事・観察】\n${e.event}\n\n`;
-          if (e.question) text += `【疑問・気づき】\n${e.question}\n\n`;
+          if (e.question) text += `【疑問・気づき（考え）】\n${e.question}\n\n`;
           if (e.feedback) text += `【指導教員のフィードバック】\n${e.feedback}\n\n`;
           if (e.tags && e.tags.length > 0) text += `【タグ】${e.tags.join("　")}\n`;
           text += "---------------------------\n\n";
