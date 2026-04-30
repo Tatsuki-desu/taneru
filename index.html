@@ -738,11 +738,14 @@ return recentDates.includes(e.date);
       };
  
       const handleAIRQ = async () => {
+        const pro = promoted.filter(p => p.tab === tab);
         const entries = loadEntriesLocal();
-        if (entries.length === 0) { alert("まず日記を記録してください。"); return; }
+        if (pro.length === 0 && entries.length === 0) { alert("まず日記を記録してください。"); return; }
         setAiLoading("rq");
-        const text = entries.slice(0, 20).map(e => `${e.date}\n【事実】${e.event||""}\n${e.question ? "【考え】" + e.question : ""}`).join("\n---\n");
-        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の日記の記録です。「事実」は観察した出来事、「考え」はそれに対する疑問や気づきです。この記録をもとに、実地研究・課題研究のリサーチクエスチョン候補を3つ提案してください。それぞれ1〜2文で具体的に書いてください。\n\n【日記の記録】\n${text}\n\n【出力形式】\n①〜\n②〜\n③〜`);
+        const source = pro.length > 0 ? pro : entries.slice(0, 20);
+        const sourceLabel = pro.length > 0 ? "昇格した気づき（「研究に使う」で選んだ記録）" : "日記の記録";
+        const text = source.map(e => `${e.date}\n【事実】${e.event||""}\n${e.question ? "【考え】" + e.question : ""}`).join("\n---\n");
+        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の${sourceLabel}です。「事実」は観察した出来事、「考え」はそれに対する疑問や気づきです。この記録をもとに、実地研究・課題研究のリサーチクエスチョン候補を3つ提案してください。それぞれ1〜2文で具体的に書いてください。\n\n【${sourceLabel}】\n${text}\n\n【出力形式】\n①〜\n②〜\n③〜`);
         if (result) { setAiRQResult(result); localStorage.setItem(localKey("ai_rq"), result); try { await fsAddAILog({ type: "rq", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {} }
         setAiLoading("");
       };
