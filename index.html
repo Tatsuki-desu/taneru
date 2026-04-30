@@ -319,7 +319,7 @@
               <textarea value={event} onChange={(e) => setEvent(e.target.value)} rows={3} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>💡 疑問・気づき</div>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>💡 疑問・気づき（考え）</div>
               <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             <div style={{ marginBottom: 12 }}>
@@ -560,7 +560,7 @@ return recentDates.includes(e.date);
               {/* ⑨ 日付入力のモバイル対応 */}
               <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 16, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none", display: "block" }} />
             </div>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📝 今日の出来事・観察</div>
+            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📝 今日の出来事・観察（事実）</div>
             <textarea value={event} onChange={(e) => setEvent(e.target.value)} rows={4} placeholder="今日の実習で気になったこと、観察したこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>💡 疑問・気づき</div>
@@ -741,8 +741,8 @@ return recentDates.includes(e.date);
         const entries = loadEntriesLocal();
         if (entries.length === 0) { alert("まず日記を記録してください。"); return; }
         setAiLoading("rq");
-        const text = entries.slice(0, 20).map(e => `${e.date}：${e.event||""}　${e.question||""}`).join("\n");
-        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の日記の記録です。この記録をもとに、実地研究・課題研究のリサーチクエスチョン候補を3つ提案してください。それぞれ1〜2文で具体的に書いてください。\n\n【日記の記録】\n${text}\n\n【出力形式】\n①〜\n②〜\n③〜`);
+        const text = entries.slice(0, 20).map(e => `${e.date}\n【事実】${e.event||""}\n${e.question ? "【考え】" + e.question : ""}`).join("\n---\n");
+        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の日記の記録です。「事実」は観察した出来事、「考え」はそれに対する疑問や気づきです。この記録をもとに、実地研究・課題研究のリサーチクエスチョン候補を3つ提案してください。それぞれ1〜2文で具体的に書いてください。\n\n【日記の記録】\n${text}\n\n【出力形式】\n①〜\n②〜\n③〜`);
         if (result) { setAiRQResult(result); localStorage.setItem(localKey("ai_rq"), result); try { await fsAddAILog({ type: "rq", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {} }
         setAiLoading("");
       };
@@ -750,7 +750,7 @@ return recentDates.includes(e.date);
         const pro = promoted.filter(p => p.tab === tab);
         if (pro.length === 0) { alert("まず「研究に使う」で気づきを昇格させてください。"); return; }
         setAiLoading("direction");
-        const text = pro.map(e => `・${e.event||""}　${e.question ? "【疑問】" + e.question : ""}`).join("\n");
+        const text = pro.map(e => `【事実】${e.event||""}\n${e.question ? "【考え】" + e.question : ""}`).join("\n---\n");
         const rq = rqText[tab] ? `現在のRQ：${rqText[tab]}` : "";
         const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生が「研究に使う」と選んだ重要な気づきです。${rq}\n\nこれらの気づきを分析して、以下の3点を教えてください。\n\n①【共通するテーマ】気づきに共通して流れているテーマや問いは何か\n②【研究の方向性】どのような研究に発展させると良いか（具体的に）\n③【次のステップ】研究を進めるために今すぐできることは何か\n\n【昇格した気づき】\n${text}`);
         if (result) { setAiDirection(result); localStorage.setItem(localKey("ai_direction"), result); try { await fsAddAILog({ type: "direction", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {} }
@@ -761,8 +761,8 @@ return recentDates.includes(e.date);
         const pro = promoted.filter(p => p.tab === tab);
         if (entries.length === 0 && pro.length === 0) { alert("まず日記を記録してください。"); return; }
         setAiLoading("keywords");
-        const text = pro.length > 0 ? pro.map(e => `${e.event||""}　${e.question||""}`).join("\n") : entries.slice(0, 10).map(e => `${e.event||""}　${e.question||""}`).join("\n");
-        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。この内容をもとに、CiNiiやGoogle Scholarで文献検索するときに使える検索キーワードを5つ提案してください。\n\n【気づきの記録】\n${text}\n\n【出力形式】\n①〜\n②〜\n③〜\n④〜\n⑤〜`);
+        const text = pro.length > 0 ? pro.map(e => `【事実】${e.event||""}\n${e.question ? "【考え】" + e.question : ""}`).join("\n---\n") : entries.slice(0, 10).map(e => `【事実】${e.event||""}\n${e.question ? "【考え】" + e.question : ""}`).join("\n---\n");
+        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。「事実」は観察した出来事、「考え」はそれに対する疑問や気づきです。この内容をもとに、CiNiiやGoogle Scholarで文献検索するときに使える検索キーワードを5つ提案してください。\n\n【気づきの記録】\n${text}\n\n【出力形式】\n①〜\n②〜\n③〜\n④〜\n⑤〜`);
         if (result) { setAiKeywords(result); localStorage.setItem(localKey("ai_keywords"), result); try { await fsAddAILog({ type: "keywords", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {} }
         setAiLoading("");
       };
@@ -771,8 +771,8 @@ return recentDates.includes(e.date);
         const entries = loadEntriesLocal();
         if (entries.length === 0 && pro.length === 0) { alert("まず日記を記録してください。"); return; }
         setAiLoading("literature");
-        const text = pro.length > 0 ? pro.map(e => `${e.event||""}　${e.question||""}`).join("\n") : entries.slice(0, 10).map(e => `${e.event||""}　${e.question||""}`).join("\n");
-        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。この内容に関連する実在する学術文献や書籍を3件紹介してください。必ず実在するものだけを紹介し、著者・タイトル・出版年・簡単な説明を書いてください。\n\n【気づきの記録】\n${text}\n\n【出力形式】\n①著者（出版年）「タイトル」\n→ 説明\n\n②著者（出版年）「タイトル」\n→ 説明\n\n③著者（出版年）「タイトル」\n→ 説明`);
+        const text = pro.length > 0 ? pro.map(e => `【事実】${e.event||""}\n${e.question ? "【考え】" + e.question : ""}`).join("\n---\n") : entries.slice(0, 10).map(e => `【事実】${e.event||""}\n${e.question ? "【考え】" + e.question : ""}`).join("\n---\n");
+        const result = await callAI(`あなたは教育学の研究支援者です。以下は教育実習生の気づきの記録です。「事実」は観察した出来事、「考え」はそれに対する疑問や気づきです。この内容に関連する実在する学術文献や書籍を3件紹介してください。必ず実在するものだけを紹介し、著者・タイトル・出版年・簡単な説明を書いてください。\n\n【気づきの記録】\n${text}\n\n【出力形式】\n①著者（出版年）「タイトル」\n→ 説明\n\n②著者（出版年）「タイトル」\n→ 説明\n\n③著者（出版年）「タイトル」\n→ 説明`);
         if (result) { setAiLiterature(result); localStorage.setItem(localKey("ai_literature"), result); try { await fsAddAILog({ type: "literature", content: result, date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }), dateTime: new Date().toISOString() }); } catch(e) {} }
         setAiLoading("");
       };
@@ -1210,7 +1210,7 @@ return recentDates.includes(e.date);
           text += `\n========== ${label} ==========\n\n■ RQ（${rqStatus[i]}）\n${rqText[i] || "（未入力）"}\n\n`;
           const pro = promoted.filter(p => p.tab === i);
           text += `■ 昇格した気づき（${pro.length}件）\n`;
-          pro.forEach(p => { text += `\n${p.date||""}\n`; if (p.event) text += `・${p.event}\n`; if (p.question) text += `💡 ${p.question}\n`; });
+          pro.forEach(p => { text += `\n${p.date||""}\n`; if (p.event) text += `【事実】${p.event}\n`; if (p.question) text += `【考え】${p.question}\n`; });
           const lits = literatures.filter(l => l.tab === i);
           text += `\n■ 文献メモ（${lits.length}件）\n`;
           lits.forEach(l => { text += `\n【${l.title}】\n`; if (l.note) text += `${l.note}\n`; });
@@ -1232,7 +1232,7 @@ return recentDates.includes(e.date);
           text += `\n========== ${label} ==========\n\n■ RQ（${rqStatus[i]}）\n${rqText[i] || "（未入力）"}\n\n`;
           const pro = promoted.filter(p => p.tab === i);
           text += `■ 昇格した気づき（${pro.length}件）\n`;
-          pro.forEach(p => { text += `\n${p.date||""}\n`; if (p.event) text += `・${p.event}\n`; if (p.question) text += `💡 ${p.question}\n`; });
+          pro.forEach(p => { text += `\n${p.date||""}\n`; if (p.event) text += `【事実】${p.event}\n`; if (p.question) text += `【考え】${p.question}\n`; });
           const lits = literatures.filter(l => l.tab === i);
           text += `\n■ 文献メモ（${lits.length}件）\n`;
           lits.forEach(l => { text += `\n【${l.title}】\n`; if (l.note) text += `${l.note}\n`; });
