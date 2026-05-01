@@ -1055,12 +1055,22 @@ return recentDates.includes(e.date);
   const offset = firstDayOfWeek;
   const today = now.getDate();
  
-  const recordedDays = [...new Set(entries.map(e => new Date(e.dateTime).getDate()))];
-  const aiDays = [...new Set(aiLogs.map(l => new Date(l.dateTime).getDate()))];
+  // 表示中の年・月に一致する記録だけ対象にする
+  const currentEntries = entries.filter(e => {
+    const d = new Date(e.dateTime);
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+  const currentAiLogs = aiLogs.filter(l => {
+    const d = new Date(l.dateTime);
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+ 
+  const recordedDays = [...new Set(currentEntries.map(e => new Date(e.dateTime).getDate()))];
+  const aiDays = [...new Set(currentAiLogs.map(l => new Date(l.dateTime).getDate()))];
   const typeLabel = { rq: "🔬 RQ提案", keywords: "🔍 キーワード提案", literature: "📚 関連文献", direction: "🔭 研究の方向性" };
  
   const entriesByDate = {};
-  entries.forEach(e => {
+  currentEntries.forEach(e => {
     const d = new Date(e.dateTime).getDate();
     if (!entriesByDate[d]) entriesByDate[d] = [];
     entriesByDate[d].push(e);
@@ -1121,7 +1131,7 @@ return recentDates.includes(e.date);
         ) : (
           Object.keys(entriesByDate).sort((a, b) => b - a).map(day => {
             const dayEntries = entriesByDate[day];
-            const dayAILogs = aiLogs.filter(l => new Date(l.dateTime).getDate() === parseInt(day));
+            const dayAILogs = currentAiLogs.filter(l => new Date(l.dateTime).getDate() === parseInt(day));
             const isSelected = parseInt(day) === selectedDay;
             return (
               <div key={day} ref={el => dateRefs.current[parseInt(day)] = el} style={{ marginBottom: 18 }}>
