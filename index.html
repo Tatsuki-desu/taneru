@@ -247,7 +247,7 @@
         { icon: "❓", title: "困ったときは", items: ["記録が表示されない → ページを再読み込みしてください。", "AI機能が使えない → 設定画面でAPIキーを確認してください。", "ログインできない → メールアドレスとパスワードを確認してください。管理者に連絡しましょう。"] },
       ];
       return (
-        <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "min(860px, 100%)", height: "100%", background: C.bg, zIndex: 1000, overflowY: "auto" }}>
+        <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "98%", height: "100%", background: C.bg, zIndex: 1000, overflowY: "auto" }}>
           <div style={{ background: C.green, padding: "18px 24px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
               <div style={{ fontSize: 18, fontWeight: "bold", color: "#FAF7F2", fontStyle: "italic" }}>使い方ガイド</div>
@@ -304,7 +304,7 @@
       };
  
       return (
-        <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "min(680px, 100%)", height: "100%", background: "rgba(0,0,0,0.5)", zIndex: 2000, display: "flex", alignItems: "flex-end" }}>
+        <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "98%", height: "100%", background: "rgba(0,0,0,0.5)", zIndex: 2000, display: "flex", alignItems: "flex-end" }}>
           <div style={{ background: C.cream, borderRadius: "16px 16px 0 0", padding: "20px", width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ fontSize: 16, fontWeight: "bold", color: C.ink }}>記録を編集</div>
@@ -1364,7 +1364,7 @@ return recentDates.includes(e.date);
       };
  
       return (
-        <div style={{ fontFamily: "'Georgia', 'Times New Roman', serif", background: C.bg, minHeight: "100vh", maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", boxShadow: "0 0 40px rgba(0,0,0,0.12)" }}>
+        <div style={{ fontFamily: "'Georgia', 'Times New Roman', serif", background: C.bg, minHeight: "100vh", maxWidth: 900, margin: "0 auto", display: "flex", flexDirection: "column", boxShadow: "0 0 40px rgba(0,0,0,0.12)" }}>
           {showHelp && <HelpScreen onClose={() => setShowHelp(false)} />}
           <div style={{ background: C.green, padding: "18px 24px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", overflow: "hidden" }}>
             <div>
