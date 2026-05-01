@@ -1047,13 +1047,29 @@ return recentDates.includes(e.date);
     load();
   }, []);
  
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  const realNow = new Date();
+  const [viewYear, setViewYear] = useState(realNow.getFullYear());
+  const [viewMonth, setViewMonth] = useState(realNow.getMonth());
+  const year = viewYear;
+  const month = viewMonth;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
   const offset = firstDayOfWeek;
-  const today = now.getDate();
+  const today = (viewYear === realNow.getFullYear() && viewMonth === realNow.getMonth()) ? realNow.getDate() : -1;
+ 
+  const goPrevMonth = () => {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
+    else setViewMonth(m => m - 1);
+    setSelectedDay(null);
+  };
+  const goNextMonth = () => {
+    const isCurrentMonth = viewYear === realNow.getFullYear() && viewMonth === realNow.getMonth();
+    if (isCurrentMonth) return;
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); }
+    else setViewMonth(m => m + 1);
+    setSelectedDay(null);
+  };
+  const isCurrentMonth = viewYear === realNow.getFullYear() && viewMonth === realNow.getMonth();
  
   // 表示中の年・月に一致する記録だけ対象にする
   const currentEntries = entries.filter(e => {
@@ -1095,9 +1111,10 @@ return recentDates.includes(e.date);
  
       {/* カレンダー（固定） */}
       <div style={{ flexShrink: 0, background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "16px 18px", marginBottom: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-          <span style={{ fontSize: 15, fontWeight: "bold", color: C.ink }}>{now.toLocaleDateString("ja-JP", { year: "numeric", month: "long" })}</span>
-          <span style={{ background: C.greenMid, color: "#fff", borderRadius: 20, padding: "2px 12px", fontSize: 10, fontWeight: "bold" }}>実習中</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <button onClick={goPrevMonth} style={{ background: "transparent", border: "none", fontSize: 18, cursor: "pointer", color: C.green, padding: "0 6px" }}>‹</button>
+          <span style={{ fontSize: 15, fontWeight: "bold", color: C.ink }}>{new Date(viewYear, viewMonth, 1).toLocaleDateString("ja-JP", { year: "numeric", month: "long" })}</span>
+          <button onClick={goNextMonth} style={{ background: "transparent", border: "none", fontSize: 18, cursor: isCurrentMonth ? "default" : "pointer", color: isCurrentMonth ? C.bgDeep : C.green, padding: "0 6px" }} disabled={isCurrentMonth}>›</button>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
           {["日", "月", "火", "水", "木", "金", "土"].map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, color: C.inkLight, padding: "4px 0" }}>{d}</div>)}
