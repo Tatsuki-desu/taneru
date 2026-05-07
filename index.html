@@ -474,7 +474,7 @@
       };
  
       const handleSave = async () => {
-        if (!event.trim() && !question.trim()) return;
+        if (!event.trim() && !question.trim() && !feedback.trim()) return;
         const newEntry = {
           date: new Date(selectedDate + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
           dateTime: new Date(selectedDate + "T00:00:00").toISOString(),
