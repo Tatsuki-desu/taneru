@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Taneru — 気づきから研究へ</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
@@ -9,7 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #E8E2D9; font-family: 'Georgia', 'Times New Roman', serif; }
+    body { background: #E8E2D9; font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-thumb { background: #8FB573; border-radius: 4px; }
     input[type="date"] { -webkit-appearance: none; appearance: none; }
@@ -215,14 +218,14 @@
               <div style={{ fontSize: 15, fontWeight: "bold", color: C.ink, marginBottom: 20, textAlign: "center" }}>ログイン</div>
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>メールアドレス</div>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none" }} />
               </div>
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>パスワード</div>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="パスワード" onKeyDown={(e) => e.key === "Enter" && handleLogin()} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="パスワード" onKeyDown={(e) => e.key === "Enter" && handleLogin()} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none" }} />
               </div>
               {error && <div style={{ background: C.terra + "22", border: `1px solid ${C.terra}44`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: C.terra, marginBottom: 14 }}>{error}</div>}
-              <button onClick={handleLogin} disabled={loading} style={{ width: "100%", background: loading ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif", fontStyle: "italic" }}>
+              <button onClick={handleLogin} disabled={loading} style={{ width: "100%", background: loading ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px", fontSize: 14, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", fontStyle: "italic" }}>
                 {loading ? "ログイン中..." : "ログイン 🌱"}
               </button>
             </div>
@@ -312,19 +315,19 @@
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>📅 日付</div>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none" }} />
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>📝 出来事・観察</div>
-              <textarea value={event} onChange={(e) => setEvent(e.target.value)} rows={3} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+              <textarea value={event} onChange={(e) => setEvent(e.target.value)} rows={3} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>💡 疑問・気づき（考え）</div>
-              <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+              <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>👨‍🏫 フィードバック</div>
-              <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+              <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>🏷 感情タグ</div>
@@ -337,7 +340,7 @@
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>🏷 キーワードタグ</div>
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addKwTag()} placeholder="タグを入力してEnter..." style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
+                <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addKwTag()} placeholder="タグを入力してEnter..." style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none" }} />
                 <button onClick={addKwTag} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 12px", fontSize: 12, cursor: "pointer" }}>追加</button>
               </div>
               {keywordTags.length > 0 && (
@@ -351,8 +354,8 @@
               )}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={onClose} style={{ flex: 1, background: "transparent", color: C.inkLight, border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif" }}>キャンセル</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "12px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{saving ? "保存中..." : "保存する"}</button>
+              <button onClick={onClose} style={{ flex: 1, background: "transparent", color: C.inkLight, border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px", fontSize: 14, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>キャンセル</button>
+              <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "12px", fontSize: 14, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>{saving ? "保存中..." : "保存する"}</button>
             </div>
           </div>
         </div>
@@ -474,7 +477,7 @@
       };
  
       const handleSave = async () => {
-        if (!event.trim() && !question.trim() && !feedback.trim()) return;
+        if (!event.trim() && !question.trim()) return;
         const newEntry = {
           date: new Date(selectedDate + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
           dateTime: new Date(selectedDate + "T00:00:00").toISOString(),
@@ -558,17 +561,17 @@ return recentDates.includes(e.date);
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📅 記録する日付</div>
               {/* ⑨ 日付入力のモバイル対応 */}
-              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 16, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none", display: "block" }} />
+              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 16, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none", display: "block" }} />
             </div>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📝 今日の出来事・観察（事実）</div>
-            <textarea value={event} onChange={(e) => setEvent(e.target.value)} rows={4} placeholder="今日の実習で気になったこと、観察したこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+            <textarea value={event} onChange={(e) => setEvent(e.target.value)} rows={4} placeholder="今日の実習で気になったこと、観察したこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>💡 疑問・気づき（考え）</div>
-              <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} placeholder="「なぜ？」と思ったこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+              <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} placeholder="「なぜ？」と思ったこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>👨‍🏫 指導教員からのフィードバック</div>
-              <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="先生から言われたこと、アドバイスなど..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+              <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="先生から言われたこと、アドバイスなど..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>🏷 感情タグ（タップで選択）</div>
@@ -584,8 +587,8 @@ return recentDates.includes(e.date);
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>🏷 キーワードタグ（任意）</div>
               <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 8 }}>この記録に関連するキーワードをタグとして追加できます。後で絞り込み検索に使えます。</div>
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeywordTag())} placeholder="例：子どもの発言、授業構成..." style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
-                <button onClick={addKeywordTag} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", flexShrink: 0 }}>追加</button>
+                <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeywordTag())} placeholder="例：子どもの発言、授業構成..." style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none" }} />
+                <button onClick={addKeywordTag} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", flexShrink: 0 }}>追加</button>
               </div>
               {keywordTags.length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
@@ -597,11 +600,11 @@ return recentDates.includes(e.date);
                   ))}
                 </div>
               )}
-              <button onClick={handleAITags} disabled={aiTagLoading} style={{ background: "transparent", color: C.greenMid, border: `1.5px solid ${C.greenMid}`, borderRadius: 10, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Georgia', serif", width: "100%" }}>
+              <button onClick={handleAITags} disabled={aiTagLoading} style={{ background: "transparent", color: C.greenMid, border: `1.5px solid ${C.greenMid}`, borderRadius: 10, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", width: "100%" }}>
                 {aiTagLoading ? "提案中..." : "🤖 AIにキーワードを提案してもらう"}
               </button>
             </div>
-            <button onClick={handleSave} style={{ background: saved ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px 24px", fontSize: 14, cursor: "pointer", fontFamily: "'Georgia', serif", fontStyle: "italic", width: "100%", marginTop: 16, transition: "background 0.2s" }}>
+            <button onClick={handleSave} style={{ background: saved ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px 24px", fontSize: 14, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", fontStyle: "italic", width: "100%", marginTop: 16, transition: "background 0.2s" }}>
               {saved ? "保存しました！✓" : "この気づきを記録する 🌱"}
             </button>
           </div>
@@ -621,7 +624,7 @@ return recentDates.includes(e.date);
  
           {/* 検索欄 */}
           <div style={{ marginBottom: 12 }}>
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 キーワードで検索（全件表示）..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.cream, color: C.ink, outline: "none" }} />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 キーワードで検索（全件表示）..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.cream, color: C.ink, outline: "none" }} />
             <div style={{ fontSize: 11, color: C.inkLight, marginTop: 6, textAlign: "right" }}>
               {tagFilter ? `🏷「${tagFilter}」タグの記録：${filteredEntries.length}件` : showingAll ? `「${search}」の検索結果：${filteredEntries.length}件` : `直近3日の記録（${filteredEntries.length}件）`}
             </div>
@@ -659,8 +662,8 @@ return recentDates.includes(e.date);
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                  <button onClick={() => handlePromote(entry)} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 10, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'Georgia', serif" }}>🔬 研究に使う</button>
-                  <button onClick={() => handleShare(entry)} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 10, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'Georgia', serif" }}>📋 掲示板に共有</button>
+                  <button onClick={() => handlePromote(entry)} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 10, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>🔬 研究に使う</button>
+                  <button onClick={() => handleShare(entry)} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 10, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>📋 掲示板に共有</button>
                 </div>
               </div>
             ))
@@ -797,7 +800,7 @@ return recentDates.includes(e.date);
             <>
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                 {tabLabels.map((label, i) => (
-                  <button key={label} onClick={() => setTab(i)} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1.5px solid ${tab === i ? C.green : C.bgDeep}`, background: tab === i ? C.green : "transparent", color: tab === i ? C.cream : C.inkLight, fontFamily: "'Georgia', serif", fontSize: 13, cursor: "pointer" }}>{label}</button>
+                  <button key={label} onClick={() => setTab(i)} style={{ flex: 1, padding: 10, borderRadius: 10, border: `1.5px solid ${tab === i ? C.green : C.bgDeep}`, background: tab === i ? C.green : "transparent", color: tab === i ? C.cream : C.inkLight, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", fontSize: 13, cursor: "pointer" }}>{label}</button>
                 ))}
               </div>
               <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.gold}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
@@ -805,11 +808,11 @@ return recentDates.includes(e.date);
                   <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase" }}>🔬 リサーチクエスチョン</div>
                   <span onClick={toggleStatus} style={{ background: rqStatus[tab] === "確定" ? C.green : C.gold, color: "#fff", borderRadius: 20, padding: "2px 10px", fontSize: 10, fontWeight: "bold", cursor: "pointer" }}>{rqStatus[tab]}</span>
                 </div>
-                <textarea value={rqText[tab]} onChange={(e) => { const u = [...rqText]; u[tab] = e.target.value; setRqText(u); }} rows={3} placeholder="例：待ち時間における子どもの自発的行動を促す環境要因とは何か？" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+                <textarea value={rqText[tab]} onChange={(e) => { const u = [...rqText]; u[tab] = e.target.value; setRqText(u); }} rows={3} placeholder="例：待ち時間における子どもの自発的行動を促す環境要因とは何か？" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
                 {/* ⑪ RQボタンのモバイル対応 */}
                 <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <button onClick={saveRQ} style={{ flex: 1, background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px 8px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>保存する</button>
-                  <button onClick={handleAIRQ} disabled={aiLoading === "rq"} style={{ flex: 1, background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px 8px", fontSize: 12, cursor: "pointer", fontFamily: "'Georgia', serif", lineHeight: 1.4 }}>{aiLoading === "rq" ? "考え中..." : "🤖 RQを\n提案してもらう"}</button>
+                  <button onClick={saveRQ} style={{ flex: 1, background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px 8px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>保存する</button>
+                  <button onClick={handleAIRQ} disabled={aiLoading === "rq"} style={{ flex: 1, background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px 8px", fontSize: 12, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", lineHeight: 1.4 }}>{aiLoading === "rq" ? "考え中..." : "🤖 RQを\n提案してもらう"}</button>
                 </div>
                 {aiRQResult && (
                   <div style={{ background: C.bg, borderRadius: 12, padding: "14px", marginTop: 12, fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
@@ -850,7 +853,7 @@ return recentDates.includes(e.date);
                         )}
                       </div>
                     ))}
-                    <button onClick={handleAIDirection} disabled={aiLoading === "direction"} style={{ width: "100%", background: aiLoading === "direction" ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", marginTop: 4 }}>
+                    <button onClick={handleAIDirection} disabled={aiLoading === "direction"} style={{ width: "100%", background: aiLoading === "direction" ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", marginTop: 4 }}>
                       {aiLoading === "direction" ? "分析中..." : "🔭 研究の方向性を提案してもらう"}
                     </button>
                     {aiDirection && (
@@ -866,9 +869,9 @@ return recentDates.includes(e.date);
               <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>📚 文献メモ</div>
                 <div style={{ marginBottom: 14 }}>
-                  <input type="text" value={litTitle} onChange={(e) => setLitTitle(e.target.value)} placeholder="著者・タイトル・年（例：山田 2020「保育環境論」）" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none", marginBottom: 8 }} />
-                  <textarea value={litNote} onChange={(e) => setLitNote(e.target.value)} rows={3} placeholder="内容メモ（自分の言葉で）..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
-                  <button onClick={handleAddLit} style={{ width: "100%", background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif", marginTop: 8 }}>＋ 文献メモを追加する</button>
+                  <input type="text" value={litTitle} onChange={(e) => setLitTitle(e.target.value)} placeholder="著者・タイトル・年（例：山田 2020「保育環境論」）" style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none", marginBottom: 8 }} />
+                  <textarea value={litNote} onChange={(e) => setLitNote(e.target.value)} rows={3} placeholder="内容メモ（自分の言葉で）..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+                  <button onClick={handleAddLit} style={{ width: "100%", background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", marginTop: 8 }}>＋ 文献メモを追加する</button>
                 </div>
                 {filteredLits.length > 0 && (
                   <div>
@@ -885,7 +888,7 @@ return recentDates.includes(e.date);
                   </div>
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-                  <button onClick={handleAIKeywords} disabled={aiLoading === "keywords"} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "keywords" ? "考え中..." : "🔍 検索キーワードを提案してもらう"}</button>
+                  <button onClick={handleAIKeywords} disabled={aiLoading === "keywords"} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>{aiLoading === "keywords" ? "考え中..." : "🔍 検索キーワードを提案してもらう"}</button>
                   {aiKeywords && (
                     <div style={{ background: C.bg, borderRadius: 12, padding: "14px", fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
                       <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>🔍 おすすめ検索キーワード</div>
@@ -893,7 +896,7 @@ return recentDates.includes(e.date);
                       <button onClick={() => { setAiKeywords(""); localStorage.removeItem(localKey("ai_keywords")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
                     </div>
                   )}
-                  <button onClick={handleAILiterature} disabled={aiLoading === "literature"} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>{aiLoading === "literature" ? "検索中..." : "📚 関連文献を探す"}</button>
+                  <button onClick={handleAILiterature} disabled={aiLoading === "literature"} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>{aiLoading === "literature" ? "検索中..." : "📚 関連文献を探す"}</button>
                   {aiLiterature && (
                     <div style={{ background: C.bg, borderRadius: 12, padding: "14px", fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
                       <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>📚 関連文献の候補</div>
@@ -1016,8 +1019,8 @@ return recentDates.includes(e.date);
                     </div>
                   )) : <div style={{ fontSize: 12, color: C.inkLight, marginBottom: 10 }}>まだコメントはありません</div>}
                   <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                    <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="コメントを書く..." onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)} style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none" }} />
-                    <button onClick={() => handleAddComment(post.id)} disabled={posting} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>送信</button>
+                    <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="コメントを書く..." onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)} style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none" }} />
+                    <button onClick={() => handleAddComment(post.id)} disabled={posting} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>送信</button>
                   </div>
                 </div>
               )}
@@ -1293,7 +1296,7 @@ return recentDates.includes(e.date);
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🤖 API設定</div>
             <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 12 }}>AnthropicのAPIキーを入力してください。</div>
-            <input type="password" defaultValue={localStorage.getItem("taneru_api_key") || ""} onChange={(e) => localStorage.setItem("taneru_api_key", e.target.value)} placeholder="sk-ant-api03-..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'Georgia', serif", background: C.bg, color: C.ink, outline: "none", marginBottom: 8 }} />
+            <input type="password" defaultValue={localStorage.getItem("taneru_api_key") || ""} onChange={(e) => localStorage.setItem("taneru_api_key", e.target.value)} placeholder="sk-ant-api03-..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none", marginBottom: 8 }} />
             <div style={{ fontSize: 11, color: C.inkLight }}>※APIキーはこのブラウザにのみ保存されます。</div>
           </div>
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
@@ -1301,22 +1304,22 @@ return recentDates.includes(e.date);
             <div style={{ background: C.bg, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
               <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 8 }}>①③の日付範囲（省略すると全期間）</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input type="date" value={exportStart} onChange={(e) => setExportStart(e.target.value)} style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "'Georgia', serif", background: C.cream, color: C.ink, outline: "none" }} />
+                <input type="date" value={exportStart} onChange={(e) => setExportStart(e.target.value)} style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.cream, color: C.ink, outline: "none" }} />
                 <span style={{ fontSize: 12, color: C.inkLight }}>〜</span>
-                <input type="date" value={exportEnd} onChange={(e) => setExportEnd(e.target.value)} style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "'Georgia', serif", background: C.cream, color: C.ink, outline: "none" }} />
+                <input type="date" value={exportEnd} onChange={(e) => setExportEnd(e.target.value)} style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.cream, color: C.ink, outline: "none" }} />
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button onClick={exportDiary} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>① 日記の記録をエクスポート</button>
-              <button onClick={exportResearch} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>② 研究ノートをエクスポート</button>
-              <button onClick={exportAll} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>③ 全体レポートをエクスポート</button>
+              <button onClick={exportDiary} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>① 日記の記録をエクスポート</button>
+              <button onClick={exportResearch} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>② 研究ノートをエクスポート</button>
+              <button onClick={exportAll} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>③ 全体レポートをエクスポート</button>
             </div>
           </div>
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>🗄 データ管理</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button onClick={handleClear} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>ローカルキャッシュを削除する</button>
-              <button onClick={handleLogout} style={{ background: C.terra, color: "#fff", border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'Georgia', serif" }}>ログアウト</button>
+              <button onClick={handleClear} style={{ background: "transparent", color: C.terra, border: `1.5px solid ${C.terra}`, borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>ローカルキャッシュを削除する</button>
+              <button onClick={handleLogout} style={{ background: C.terra, color: "#fff", border: "none", borderRadius: 12, padding: "10px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>ログアウト</button>
             </div>
           </div>
           <div style={{ textAlign: "center", marginTop: 20, color: C.inkLight, fontSize: 11, letterSpacing: "0.1em" }}>Taneru v0.8 — 気づきから研究へ 🌱</div>
@@ -1364,7 +1367,7 @@ return recentDates.includes(e.date);
       };
  
       return (
-        <div style={{ fontFamily: "'Georgia', 'Times New Roman', serif", background: C.bg, minHeight: "100vh", maxWidth: "98%", margin: "0 auto", display: "flex", flexDirection: "column", boxShadow: "0 0 40px rgba(0,0,0,0.12)" }}>
+        <div style={{ fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, minHeight: "100vh", maxWidth: "98%", margin: "0 auto", display: "flex", flexDirection: "column", boxShadow: "0 0 40px rgba(0,0,0,0.12)" }}>
           {showHelp && <HelpScreen onClose={() => setShowHelp(false)} />}
           <div style={{ background: C.green, padding: "18px 24px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", overflow: "hidden" }}>
             <div>
