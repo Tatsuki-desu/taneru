@@ -675,27 +675,26 @@
             </button>
           </div>
           ) : (
-          {/* OPPフォーム */}
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📅 記録する日付</div>
               <input type="date" value={oppDate} onChange={(e) => setOppDate(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 16, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none", display: "block" }} />
             </div>
             <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>⭐ 学修を通して一番重要だったこと</div>
-            <textarea value={oppImportant} onChange={(e) => setOppImportant(e.target.value)} rows={4} placeholder={`今週の実習で最も重要だと感じたこと...`} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+            <textarea value={oppImportant} onChange={(e) => setOppImportant(e.target.value)} rows={4} placeholder="今週の実習で最も重要だと感じたこと..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>💭 疑問点・感想</div>
-              <textarea value={oppQuestion} onChange={(e) => setOppQuestion(e.target.value)} rows={3} placeholder={`疑問に感じたこと、感想...`} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+              <textarea value={oppQuestion} onChange={(e) => setOppQuestion(e.target.value)} rows={3} placeholder="疑問に感じたこと、感想..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.gold, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>👨‍🏫 教員からのコメント</div>
-              <textarea value={oppFeedback} onChange={(e) => setOppFeedback(e.target.value)} rows={3} placeholder={`教員からのフィードバック...`} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+              <textarea value={oppFeedback} onChange={(e) => setOppFeedback(e.target.value)} rows={3} placeholder="教員からのフィードバック..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
             </div>
             {/* OPP キーワードタグ */}
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>🏷 キーワードタグ（任意）</div>
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <input type="text" value={oppTagInput} onChange={(e) => setOppTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addOppKeywordTag())} placeholder={`タグを入力してEnter...`} style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none" }} />
+                <input type="text" value={oppTagInput} onChange={(e) => setOppTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addOppKeywordTag())} placeholder="タグを入力してEnter..." style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none" }} />
                 <button onClick={addOppKeywordTag} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", flexShrink: 0 }}>追加</button>
               </div>
               {oppKeywordTags.length > 0 && (
