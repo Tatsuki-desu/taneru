@@ -375,6 +375,8 @@
       };
       const draft = loadDraft();
  
+      const [recordMode, setRecordMode] = useState("diary"); // "diary" | "opp"
+ 
       const [selectedDate, setSelectedDate] = useState(draft?.selectedDate || todayStr);
       const [event, setEvent] = useState(draft?.event || "");
       const [question, setQuestion] = useState(draft?.question || "");
@@ -382,6 +384,18 @@
       const [tags, setTags] = useState(draft?.tags || []);
       const [keywordTags, setKeywordTags] = useState(draft?.keywordTags || []);
       const [tagInput, setTagInput] = useState(draft?.tagInput || "");
+ 
+      // OPP 専用フォーム state
+      const loadOppDraft = () => { try { const d = localStorage.getItem(localKey("opp_draft")); return d ? JSON.parse(d) : null; } catch(e) { return null; } };
+      const oppDraft = loadOppDraft();
+      const [oppDate, setOppDate] = useState(oppDraft?.oppDate || todayStr);
+      const [oppImportant, setOppImportant] = useState(oppDraft?.oppImportant || "");
+      const [oppQuestion, setOppQuestion] = useState(oppDraft?.oppQuestion || "");
+      const [oppFeedback, setOppFeedback] = useState(oppDraft?.oppFeedback || "");
+      const [oppKeywordTags, setOppKeywordTags] = useState(oppDraft?.oppKeywordTags || []);
+      const [oppTagInput, setOppTagInput] = useState(oppDraft?.oppTagInput || "");
+      const [oppSaved, setOppSaved] = useState(false);
+ 
       const [tagFilter, setTagFilter] = useState("");
       const [aiTagLoading, setAiTagLoading] = useState(false);
       const [entries, setEntries] = useState([]);
@@ -398,6 +412,12 @@
         const d = { selectedDate, event, question, feedback, tags, keywordTags, tagInput };
         localStorage.setItem(DRAFT_KEY(), JSON.stringify(d));
       }, [selectedDate, event, question, feedback, tags, keywordTags, tagInput]);
+ 
+      // OPP ドラフト自動保存
+      useEffect(() => {
+        const d = { oppDate, oppImportant, oppQuestion, oppFeedback, oppKeywordTags, oppTagInput };
+        localStorage.setItem(localKey("opp_draft"), JSON.stringify(d));
+      }, [oppDate, oppImportant, oppQuestion, oppFeedback, oppKeywordTags, oppTagInput]);
  
       useEffect(() => {
         const load = async () => {
@@ -418,6 +438,39 @@
         setEvent(""); setQuestion(""); setFeedback(""); setTags([]);
         setKeywordTags([]); setTagInput("");
         setSelectedDate(todayStr);
+      };
+ 
+      const clearOppDraft = () => {
+        localStorage.removeItem(localKey("opp_draft"));
+        setOppImportant(""); setOppQuestion(""); setOppFeedback("");
+        setOppKeywordTags([]); setOppTagInput("");
+        setOppDate(todayStr);
+      };
+ 
+      const handleSaveOPP = async () => {
+        if (!oppImportant.trim() && !oppQuestion.trim() && !oppFeedback.trim()) return;
+        const newEntry = {
+          date: new Date(oppDate + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
+          dateTime: new Date(oppDate + "T00:00:00").toISOString(),
+          event: oppImportant.trim(),
+          question: oppQuestion.trim(),
+          feedback: oppFeedback.trim(),
+          tags: [],
+          keywordTags: oppKeywordTags,
+          type: "opp",
+        };
+        setOppSaved(true);
+        try {
+          await fsAddEntry(newEntry);
+          const data = await fsGetEntries();
+          setEntries(data); saveEntriesLocal(data); setSynced(true);
+        } catch(e) {
+          const withId = { ...newEntry, id: Date.now().toString() };
+          const updated = [withId, ...loadEntriesLocal()];
+          saveEntriesLocal(updated); setEntries(updated);
+        }
+        clearOppDraft();
+        setTimeout(() => setOppSaved(false), 2000);
       };
  
       const toggleTag = (t) => setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
@@ -498,9 +551,10 @@
         setTimeout(() => setSaved(false), 2000);
       };
  
-      // ⑤ デフォルトは今日の記録のみ、検索時は全件
+      // ⑤ recordMode に応じて日記/OPP を切り替え、デフォルトは直近3日
       const todayDateStr = new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
-      const filteredEntries = entries.filter(e => {
+      const modeEntries = entries.filter(e => recordMode === "opp" ? e.type === "opp" : e.type !== "opp");
+      const filteredEntries = modeEntries.filter(e => {
         if (tagFilter) {
           return (e.keywordTags||[]).includes(tagFilter);
         }
@@ -508,10 +562,11 @@
           const kw = search.trim().toLowerCase();
           return (e.event||"").toLowerCase().includes(kw) || (e.question||"").toLowerCase().includes(kw) || (e.feedback||"").toLowerCase().includes(kw);
         }
-        const recentDates = [...new Set(entries.map(e => e.date))].slice(0, 3);
-return recentDates.includes(e.date);
+        const recentDates = [...new Set(modeEntries.map(e => e.date))].slice(0, 3);
+        return recentDates.includes(e.date);
       });
       const showingAll = search.trim() !== "" || tagFilter !== "";
+      const allKeywordTagsForMode = [...new Set(modeEntries.flatMap(e => e.keywordTags || []))];
  
       const emotionTags = ["😮 驚き", "😟 モヤモヤ", "💡 ひらめき", "❓ 疑問"];
       const hasDraft = event.trim() || question.trim() || feedback.trim();
@@ -537,7 +592,8 @@ return recentDates.includes(e.date);
       };
  
       // ③ 全記録から使われているキーワードタグを収集
-      const allKeywordTags = [...new Set(entries.flatMap(e => e.keywordTags || []))];
+      const addOppKeywordTag = () => { const t = oppTagInput.trim(); if (t && !oppKeywordTags.includes(t)) setOppKeywordTags(prev => [...prev, t]); setOppTagInput(""); };
+      const removeOppKeywordTag = (t) => setOppKeywordTags(prev => prev.filter(x => x !== t));
  
       return (
         <div>
@@ -557,6 +613,16 @@ return recentDates.includes(e.date);
             </div>
           )}
  
+          {/* 📔 日記 / 📋 OPP タブ切り替え */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            {["diary", "opp"].map((mode, i) => (
+              <button key={mode} onClick={() => { setRecordMode(mode); setTagFilter(""); setSearch(""); }} style={{ flex: 1, padding: "10px 0", borderRadius: 12, border: "none", fontSize: 13, fontWeight: "bold", cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: recordMode === mode ? C.green : C.cream, color: recordMode === mode ? "#fff" : C.inkLight, boxShadow: recordMode === mode ? "0 2px 8px rgba(0,0,0,0.10)" : "none", transition: "all 0.15s" }}>
+                {mode === "diary" ? "📔 日記" : "📋 OPP"}
+              </button>
+            ))}
+          </div>
+ 
+          {recordMode === "diary" ? (
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📅 記録する日付</div>
@@ -608,14 +674,53 @@ return recentDates.includes(e.date);
               {saved ? "保存しました！✓" : "この気づきを記録する 🌱"}
             </button>
           </div>
+          ) : (
+          {/* OPPフォーム */}
+          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📅 記録する日付</div>
+              <input type="date" value={oppDate} onChange={(e) => setOppDate(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 16, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none", display: "block" }} />
+            </div>
+            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>⭐ 学修を通して一番重要だったこと</div>
+            <textarea value={oppImportant} onChange={(e) => setOppImportant(e.target.value)} rows={4} placeholder={`今週の実習で最も重要だと感じたこと...`} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>💭 疑問点・感想</div>
+              <textarea value={oppQuestion} onChange={(e) => setOppQuestion(e.target.value)} rows={3} placeholder={`疑問に感じたこと、感想...`} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.gold, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>👨‍🏫 教員からのコメント</div>
+              <textarea value={oppFeedback} onChange={(e) => setOppFeedback(e.target.value)} rows={3} placeholder={`教員からのフィードバック...`} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+            </div>
+            {/* OPP キーワードタグ */}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, textTransform: "uppercase", marginBottom: 6 }}>🏷 キーワードタグ（任意）</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <input type="text" value={oppTagInput} onChange={(e) => setOppTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addOppKeywordTag())} placeholder={`タグを入力してEnter...`} style={{ flex: 1, border: `1.5px solid ${C.bgDeep}`, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none" }} />
+                <button onClick={addOppKeywordTag} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, cursor: "pointer", flexShrink: 0 }}>追加</button>
+              </div>
+              {oppKeywordTags.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {oppKeywordTags.map(t => (
+                    <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, fontSize: 12, background: C.green + "22", color: C.green, border: `1px solid ${C.green}44` }}>
+                      {t}<span onClick={() => removeOppKeywordTag(t)} style={{ cursor: "pointer", fontSize: 14, color: C.inkLight }}>×</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={handleSaveOPP} style={{ background: oppSaved ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "13px 24px", fontSize: 14, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", fontStyle: "italic", width: "100%", marginTop: 16, transition: "background 0.2s" }}>
+              {oppSaved ? "保存しました！✓" : "OPPシートを記録する 📋"}
+            </button>
+          </div>
+          )}
  
  
           {/* ③ タグフィルター */}
-          {allKeywordTags.length > 0 && (
+          {allKeywordTagsForMode.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 6 }}>🏷 タグで絞り込む</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {allKeywordTags.map(t => (
+                {allKeywordTagsForMode.map(t => (
                   <span key={t} onClick={() => { setTagFilter(prev => prev === t ? "" : t); setSearch(""); }} style={{ display: "inline-block", padding: "4px 12px", borderRadius: 20, fontSize: 12, cursor: "pointer", background: tagFilter === t ? C.green : C.green + "18", color: tagFilter === t ? "#fff" : C.green, border: `1px solid ${C.green}33`, transition: "all 0.15s" }}>{t}</span>
                 ))}
               </div>
@@ -638,6 +743,7 @@ return recentDates.includes(e.date);
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
+                    {entry.type === "opp" && <span style={{ fontSize: 10, background: "#6B5B95" + "22", color: "#6B5B95", borderRadius: 20, padding: "1px 7px", border: "1px solid #6B5B9544" }}>📋 OPP</span>}
                     {promotedEntries.some(p => (p.entryId || p.id) === entry.id) && <span style={{ fontSize: 10, background: C.green + "22", color: C.green, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.green}44` }}>🔬 研究中</span>}
                     {sharedEntryIds.includes(entry.id) && <span style={{ fontSize: 10, background: C.terra + "22", color: C.terra, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.terra}44` }}>📋 共有済</span>}
                   </div>
@@ -1214,12 +1320,29 @@ return recentDates.includes(e.date);
         a.href = url; a.download = filename; a.click();
         URL.revokeObjectURL(url);
       };
+      const exportOPP = async () => {
+        let entries = [];
+        try { entries = await fsGetEntries(); } catch(e) { entries = loadEntriesLocal(); }
+        const filtered = entries.filter(e => e.type === "opp").sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+        if (filtered.length === 0) { alert("OPPの記録がありません。"); return; }
+        let text = `===========================\nTaneru｜OPPシート記録\n出力日：${new Date().toLocaleDateString("ja-JP")}\n===========================\n\n`;
+        filtered.forEach(e => {
+          text += `■ ${e.date}\n`;
+          if (e.event) text += `【学修を通して一番重要だったこと】\n${e.event}\n\n`;
+          if (e.question) text += `【疑問点・感想】\n${e.question}\n\n`;
+          if (e.feedback) text += `【教員からのコメント】\n${e.feedback}\n\n`;
+          if (e.keywordTags && e.keywordTags.length > 0) text += `【キーワードタグ】${e.keywordTags.join("　")}\n`;
+          text += "---------------------------\n\n";
+        });
+        downloadText("taneru_opp.txt", text);
+      };
+ 
       const exportDiary = async () => {
         let entries = [];
         try { entries = await fsGetEntries(); } catch(e) { entries = loadEntriesLocal(); }
         const start = exportStart ? new Date(exportStart + "T00:00:00") : null;
         const end = exportEnd ? new Date(exportEnd + "T23:59:59") : null;
-        const filtered = entries.filter(e => { const d = new Date(e.dateTime); if (start && d < start) return false; if (end && d > end) return false; return true; });
+        const filtered = entries.filter(e => { const d = new Date(e.dateTime); if (e.type === "opp") return false; if (start && d < start) return false; if (end && d > end) return false; return true; });
         if (filtered.length === 0) { alert("指定した期間に記録がありません。"); return; }
         const dateLabel = exportStart || exportEnd ? `${exportStart || "最初"} 〜 ${exportEnd || "最新"}` : "全期間";
         let text = `===========================\nTaneru｜日記の記録\n出力日：${new Date().toLocaleDateString("ja-JP")}\n期間：${dateLabel}\n===========================\n\n`;
@@ -1311,8 +1434,9 @@ return recentDates.includes(e.date);
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button onClick={exportDiary} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>① 日記の記録をエクスポート</button>
-              <button onClick={exportResearch} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>② 研究ノートをエクスポート</button>
-              <button onClick={exportAll} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>③ 全体レポートをエクスポート</button>
+              <button onClick={exportOPP} style={{ background: "transparent", color: "#6B5B95", border: "1.5px solid #6B5B95", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>② OPPシートをエクスポート</button>
+              <button onClick={exportResearch} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>③ 研究ノートをエクスポート</button>
+              <button onClick={exportAll} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>④ 全体レポートをエクスポート</button>
             </div>
           </div>
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14 }}>
