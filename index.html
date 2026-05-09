@@ -242,12 +242,59 @@
     // ── ヘルプ画面 ───────────────────────────────
     function HelpScreen({ onClose }) {
       const sections = [
-        { icon: "✏️", title: "記録画面", items: ["日付を選んで、その日の出来事・疑問・フィードバックを記録します。", "感情タグ（驚き・モヤモヤ・ひらめき・疑問）を選んで気持ちも記録できます。", "「🔬 研究に使う」→ 記録を研究ノートに昇格させます。", "「📋 掲示板に共有」→ 仲間と気づきを共有できます。", "✏️ ボタンで記録を後から編集できます。", "過去の日付を選べば、先週の記録も後から入力できます。", "デフォルトでは今日の記録のみ表示されます。キーワード検索すると全件表示されます。"] },
-        { icon: "🔬", title: "研究ノート画面", items: ["実地研究Ⅱと課題研究Ⅱのタブで切り替えて管理できます。", "リサーチクエスチョン（研究で答えたい問い）を書いて保存します。", "「🤖 RQを提案してもらう」→ AIが日記をもとにRQ候補を3つ提案します。", "「🔭 研究の方向性を提案してもらう」→ 昇格した気づきから研究の方向性を示します。", "「🔍 検索キーワード提案」→ 文献検索に使えるキーワードを提案します。", "「📚 関連文献を探す」→ AIが関連する学術文献を紹介します（要CiNiiで確認）。", "研究ノートのデータはクラウドに保存されます。"] },
-        { icon: "📋", title: "掲示板画面", items: ["記録画面から共有した気づきが表示されます。", "「💬 コメント」をタップするとコメントの入力欄が開きます。", "投稿の削除は投稿した本人のみできます（管理者は全件削除可能）。", "コメントの削除は誰でもできます。"] },
-        { icon: "📅", title: "カレンダー画面", items: ["記録した日が緑色に色づきます。", "AI提案があった日には金色の点が表示されます。", "日付をタップするとその日の記録とAI提案が確認できます。"] },
-        { icon: "⚙️", title: "設定画面", items: ["AnthropicのAPIキーを入力するとAI機能が使えるようになります。", "日記の記録・研究ノート・全体レポートをテキストファイルでエクスポートできます。", "ログアウトボタンでアカウントを切り替えられます。"] },
-        { icon: "❓", title: "困ったときは", items: ["記録が表示されない → ページを再読み込みしてください。", "AI機能が使えない → 設定画面でAPIキーを確認してください。", "ログインできない → メールアドレスとパスワードを確認してください。管理者に連絡しましょう。"] },
+        { icon: "✏️", title: "記録画面", items: [
+          "上部の「📔 日記」「📋 OPP」「💬 チャット」タブで記録の種類を切り替えます。",
+          "【📔 日記】日付を選んで、出来事（事実）・疑問・気づき（考え）・フィードバックを記録します。",
+          "【📋 OPP】毎週のOPPシートを記録します。学修で重要だったこと・疑問点・教員コメントを入力します。",
+          "【💬 チャット】Claude.aiとのチャット内容を貼り付けると、気づきを自動で整形して記録できます（2000文字まで）。",
+          "感情タグ（驚き・モヤモヤ・ひらめき・疑問）で気持ちも記録できます。",
+          "キーワードタグを手動で追加するか、「🤖 AIにタグを提案してもらう」で自動付与できます。",
+          "タグをタップすると一覧をタグで絞り込めます。",
+          "「🔬 研究に使う」→ 記録を研究ノートに昇格させます（実地研究Ⅱ・課題研究Ⅱを選べます）。",
+          "「📋 掲示板に共有」→ 仲間と気づきを共有できます。",
+          "✏️ ボタンで記録の内容・日付を後から編集できます。",
+          "各記録には「🔬 研究中」「📋 共有済」「📋 OPP」「💬 チャット」のバッジが表示されます。",
+          "デフォルトでは直近3日の記録のみ表示されます。キーワード検索やタグ絞り込みをすると全件表示されます。"
+        ] },
+        { icon: "🔬", title: "研究ノート画面", items: [
+          "実地研究Ⅱと課題研究Ⅱのタブで切り替えて管理できます。",
+          "リサーチクエスチョン（研究で答えたい問い）を書いて「仮・確定・完了」で進捗管理できます。",
+          "「🤖 RQを提案してもらう」→ 昇格した気づきをもとにRQ候補を3つ提案します（昇格記録がない場合は日記全体から提案）。",
+          "「🔭 研究の方向性を提案してもらう」→ 昇格した気づきから共通テーマ・方向性・次のステップを提示します。",
+          "「🔍 検索キーワード提案」→ 文献検索に使えるキーワードを提案します。",
+          "「📚 関連文献を探す」→ AIが関連する学術文献を紹介します（要CiNiiで確認）。",
+          "AIはOPPシートと日記の記録を区別して読み込みます。",
+          "昇格した気づきにはキーワードタグでの絞り込みができます。",
+          "「🔬 研究中」バッジがついた記録は昇格済みです。両方のタブに昇格することもできます。"
+        ] },
+        { icon: "📋", title: "掲示板画面", items: [
+          "記録画面から共有した気づきが表示されます。",
+          "「💬 コメント」をタップするとコメントの入力欄が開きます。",
+          "共有した投稿が研究ノートに昇格済みの場合は「🔬 研究中」バッジが表示されます。",
+          "投稿の削除は投稿した本人のみできます（管理者は全件削除可能）。"
+        ] },
+        { icon: "📅", title: "カレンダー画面", items: [
+          "記録した日が緑色に色づきます（日記・OPP・チャットすべて表示されます）。",
+          "AI提案があった日には金色の点が表示されます。",
+          "「‹」「›」ボタンで月を移動できます（未来の月には進めません）。",
+          "日付をタップするとその日の記録とAI提案が確認できます。",
+          "記録の種類は「📋 OPP」「💬 チャット」「🔬 研究中」「📋 共有済」バッジで区別できます。"
+        ] },
+        { icon: "⚙️", title: "設定画面", items: [
+          "AnthropicのAPIキーを入力するとAI機能が使えるようになります。",
+          "① 日記の記録をエクスポート（OPPを除く。研究昇格済みには[🔬]マークがつきます）。",
+          "② OPPシートをエクスポート（OPP記録のみ）。",
+          "③ 研究ノートをエクスポート（RQ・昇格した気づき・文献メモ）。",
+          "④ 全体レポートをエクスポート（研究ノート＋全記録。[OPP][💬 チャット][🔬 昇格]マーク付き）。",
+          "ログアウトボタンでアカウントを切り替えられます。"
+        ] },
+        { icon: "❓", title: "困ったときは", items: [
+          "記録が表示されない → ページを再読み込みしてください。",
+          "カレンダーに記録が出ない → 月の切り替えボタンで正しい月を表示しているか確認してください。",
+          "AI機能が使えない → 設定画面でAPIキーを確認してください。",
+          "チャット整形がうまくいかない → 2000文字以内に収めて再試行してください。",
+          "ログインできない → メールアドレスとパスワードを確認してください。管理者に連絡しましょう。"
+        ] },
       ];
       return (
         <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "98%", height: "100%", background: C.bg, zIndex: 1000, overflowY: "auto" }}>
@@ -375,7 +422,11 @@
       };
       const draft = loadDraft();
  
-      const [recordMode, setRecordMode] = useState("diary"); // "diary" | "opp"
+      const [recordMode, setRecordMode] = useState("diary"); // "diary" | "opp" | "chat"
+      const [chatInput, setChatInput] = useState("");
+      const [chatExtracted, setChatExtracted] = useState(null); // { event, question, feedback, keywordTags }
+      const [chatLoading, setChatLoading] = useState(false);
+      const [chatSaved, setChatSaved] = useState(false);
  
       const [selectedDate, setSelectedDate] = useState(draft?.selectedDate || todayStr);
       const [event, setEvent] = useState(draft?.event || "");
@@ -553,7 +604,11 @@
  
       // ⑤ recordMode に応じて日記/OPP を切り替え、デフォルトは直近3日
       const todayDateStr = new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
-      const modeEntries = entries.filter(e => recordMode === "opp" ? e.type === "opp" : e.type !== "opp");
+      const modeEntries = entries.filter(e => {
+        if (recordMode === "opp") return e.type === "opp";
+        if (recordMode === "chat") return e.type === "chat";
+        return e.type !== "opp" && e.type !== "chat";
+      });
       const filteredEntries = modeEntries.filter(e => {
         if (tagFilter) {
           return (e.keywordTags||[]).includes(tagFilter);
@@ -592,6 +647,55 @@
       };
  
       // ③ 全記録から使われているキーワードタグを収集
+      // 💬 チャット整形
+      const handleExtract = async () => {
+        if (!chatInput.trim()) { alert("チャット内容を貼り付けてください。"); return; }
+        if (chatInput.length > 2000) { alert("2000文字以内に収めてください。"); return; }
+        setChatLoading(true);
+        const result = await callAI(`以下はClaudeとのチャット内容です。この内容から教育実習生の気づきを抽出して、必ずJSONのみで返してください（前置き・説明・backtick不要）。
+ 
+{"event":"出来事・観察（事実）の要約","question":"疑問・気づき（考え）の要約","feedback":"フィードバックや助言があれば","keywordTags":["タグ1","タグ2"]}
+ 
+【チャット内容】
+${chatInput}`);
+        if (result) {
+          try {
+            const clean = result.replace(/^```json|^```|```$/gm, "").trim();
+            const parsed = JSON.parse(clean);
+            setChatExtracted(parsed);
+          } catch(e) {
+            alert("整形に失敗しました。もう一度試してください。");
+          }
+        }
+        setChatLoading(false);
+      };
+ 
+      const handleSaveChat = async () => {
+        if (!chatExtracted) return;
+        const newEntry = {
+          date: new Date(selectedDate + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
+          dateTime: new Date(selectedDate + "T00:00:00").toISOString(),
+          event: chatExtracted.event || "",
+          question: chatExtracted.question || "",
+          feedback: chatExtracted.feedback || "",
+          tags: [],
+          keywordTags: chatExtracted.keywordTags || [],
+          type: "chat",
+        };
+        setChatSaved(true);
+        try {
+          await fsAddEntry(newEntry);
+          const data = await fsGetEntries();
+          setEntries(data); saveEntriesLocal(data); setSynced(true);
+        } catch(e) {
+          const withId = { ...newEntry, id: Date.now().toString() };
+          const updated = [withId, ...loadEntriesLocal()];
+          saveEntriesLocal(updated); setEntries(updated);
+        }
+        setChatInput(""); setChatExtracted(null);
+        setTimeout(() => setChatSaved(false), 2000);
+      };
+ 
       const addOppKeywordTag = () => { const t = oppTagInput.trim(); if (t && !oppKeywordTags.includes(t)) setOppKeywordTags(prev => [...prev, t]); setOppTagInput(""); };
       const removeOppKeywordTag = (t) => setOppKeywordTags(prev => prev.filter(x => x !== t));
  
@@ -615,9 +719,9 @@
  
           {/* 📔 日記 / 📋 OPP タブ切り替え */}
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            {["diary", "opp"].map((mode, i) => (
+            {["diary", "opp", "chat"].map((mode) => (
               <button key={mode} onClick={() => { setRecordMode(mode); setTagFilter(""); setSearch(""); }} style={{ flex: 1, padding: "10px 0", borderRadius: 12, border: "none", fontSize: 13, fontWeight: "bold", cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: recordMode === mode ? C.green : C.cream, color: recordMode === mode ? "#fff" : C.inkLight, boxShadow: recordMode === mode ? "0 2px 8px rgba(0,0,0,0.10)" : "none", transition: "all 0.15s" }}>
-                {mode === "diary" ? "📔 日記" : "📋 OPP"}
+                {mode === "diary" ? "📔 日記" : mode === "opp" ? "📋 OPP" : "💬 チャット"}
               </button>
             ))}
           </div>
@@ -674,7 +778,7 @@
               {saved ? "保存しました！✓" : "この気づきを記録する 🌱"}
             </button>
           </div>
-          ) : (
+          ) : recordMode === "opp" ? (
           <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>📅 記録する日付</div>
@@ -711,6 +815,37 @@
               {oppSaved ? "保存しました！✓" : "OPPシートを記録する 📋"}
             </button>
           </div>
+          ) : (
+          <div style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderRadius: 16, padding: "18px 20px", marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+            <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>💬 チャット内容から記録を作る</div>
+            <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 10, lineHeight: 1.6 }}>Claude.aiとのチャット内容を貼り付けると、気づきを自動で整形します。</div>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 6 }}>📅 記録する日付</div>
+              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 16, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none", display: "block" }} />
+            </div>
+            <textarea value={chatInput} onChange={(e) => setChatInput(e.target.value)} rows={6} placeholder="ここにClaudeとのチャット内容を貼り付けてください..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 13, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
+            <div style={{ fontSize: 10, color: chatInput.length > 2000 ? C.terra : C.inkLight, textAlign: "right", marginTop: 4, marginBottom: 10 }}>{chatInput.length} / 2000文字</div>
+            <button onClick={handleExtract} disabled={chatLoading || chatInput.length > 2000} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", width: "100%", marginBottom: chatExtracted ? 14 : 0, opacity: chatInput.length > 2000 ? 0.5 : 1 }}>
+              {chatLoading ? "整形中..." : "🔍 気づきを整形する"}
+            </button>
+            {chatExtracted && (
+              <div style={{ background: C.bg, borderRadius: 12, padding: "14px 16px", border: `1px solid ${C.bgDeep}` }}>
+                <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 10 }}>📋 整形結果（確認してください）</div>
+                {chatExtracted.event && <div style={{ marginBottom: 8 }}><div style={{ fontSize: 10, color: C.inkLight, marginBottom: 3 }}>📝 出来事・観察（事実）</div><div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{""+chatExtracted.event}</div></div>}
+                {chatExtracted.question && <div style={{ marginBottom: 8 }}><div style={{ fontSize: 10, color: C.inkLight, marginBottom: 3 }}>💡 疑問・気づき（考え）</div><div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.6 }}>{""+chatExtracted.question}</div></div>}
+                {chatExtracted.feedback && <div style={{ marginBottom: 8 }}><div style={{ fontSize: 10, color: C.inkLight, marginBottom: 3 }}>👨‍🏫 フィードバック</div><div style={{ fontSize: 13, color: C.gold, lineHeight: 1.6 }}>{""+chatExtracted.feedback}</div></div>}
+                {chatExtracted.keywordTags && chatExtracted.keywordTags.length > 0 && (
+                  <div><div style={{ fontSize: 10, color: C.inkLight, marginBottom: 4 }}>🏷 キーワードタグ</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {chatExtracted.keywordTags.map(t => <span key={t} style={{ fontSize: 11, background: C.green+"22", color: C.green, borderRadius: 20, padding: "2px 8px", border: `1px solid ${C.green}33` }}>{""+t}</span>)}
+                  </div></div>
+                )}
+                <button onClick={handleSaveChat} style={{ background: chatSaved ? C.greenMid : C.green, color: C.cream, border: "none", borderRadius: 12, padding: "12px", fontSize: 14, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", fontStyle: "italic", width: "100%", marginTop: 12, transition: "background 0.2s" }}>
+                  {chatSaved ? "保存しました！✓" : "この内容で記録する 💬"}
+                </button>
+              </div>
+            )}
+          </div>
           )}
  
  
@@ -743,6 +878,7 @@
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
                     {entry.type === "opp" && <span style={{ fontSize: 10, background: "#6B5B95" + "22", color: "#6B5B95", borderRadius: 20, padding: "1px 7px", border: "1px solid #6B5B9544" }}>📋 OPP</span>}
+                    {entry.type === "chat" && <span style={{ fontSize: 10, background: "#4A90D9" + "22", color: "#4A90D9", borderRadius: 20, padding: "1px 7px", border: "1px solid #4A90D944" }}>💬 チャット</span>}
                     {promotedEntries.some(p => (p.entryId || p.id) === entry.id) && <span style={{ fontSize: 10, background: C.green + "22", color: C.green, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.green}44` }}>🔬 研究中</span>}
                     {sharedEntryIds.includes(entry.id) && <span style={{ fontSize: 10, background: C.terra + "22", color: C.terra, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.terra}44` }}>📋 共有済</span>}
                   </div>
@@ -1468,9 +1604,10 @@
         text += `\n\n===========================\n■ 日記の記録（${filtered.length}件）\n===========================\n\n`;
         filtered.forEach(e => {
           const isOpp = e.type === "opp";
+          const isChat = e.type === "chat";
           const promotedTabs = promoted.filter(p => (p.entryId || p.id) === e.id).map(p => tabLabels[p.tab]);
           const proLabel = promotedTabs.length > 0 ? `　[🔬 ${promotedTabs.join("・")}昇格]` : "";
-          const oppLabel = isOpp ? "　[OPP]" : "";
+          const oppLabel = isOpp ? "　[OPP]" : isChat ? "　[💬 チャット]" : "";
           text += `■ ${e.date}${oppLabel}${proLabel}\n`;
           if (isOpp) {
             if (e.event) text += `【学修で重要だったこと】\n${e.event}\n\n`;
