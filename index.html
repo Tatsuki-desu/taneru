@@ -1198,23 +1198,37 @@
   };
   const isCurrentMonth = viewYear === realNow.getFullYear() && viewMonth === realNow.getMonth();
  
+  // エントリのローカル月・年・日を取得するヘルパー（タイムゾーンに依存しない）
+  const getLocalParts = (dateTime, dateStr) => {
+    if (dateTime) {
+      const d = new Date(dateTime);
+      if (!isNaN(d.getTime())) return { y: d.getFullYear(), m: d.getMonth(), day: d.getDate() };
+    }
+    if (dateStr) {
+      const parts = dateStr.split('/');
+      if (parts.length === 2) return { y: year, m: parseInt(parts[0]) - 1, day: parseInt(parts[1]) };
+    }
+    return null;
+  };
+ 
   // 表示中の年・月に一致する記録だけ対象にする
   const currentEntries = entries.filter(e => {
-    const d = new Date(e.dateTime);
-    return d.getFullYear() === year && d.getMonth() === month;
+    const p = getLocalParts(e.dateTime, e.date);
+    return p && p.y === year && p.m === month;
   });
   const currentAiLogs = aiLogs.filter(l => {
-    const d = new Date(l.dateTime);
-    return d.getFullYear() === year && d.getMonth() === month;
+    const p = getLocalParts(l.dateTime, l.date);
+    return p && p.y === year && p.m === month;
   });
  
-  const recordedDays = [...new Set(currentEntries.map(e => new Date(e.dateTime).getDate()))];
-  const aiDays = [...new Set(currentAiLogs.map(l => new Date(l.dateTime).getDate()))];
+  const recordedDays = [...new Set(currentEntries.map(e => getLocalParts(e.dateTime, e.date)?.day).filter(Boolean))];
+  const aiDays = [...new Set(currentAiLogs.map(l => getLocalParts(l.dateTime, l.date)?.day).filter(Boolean))];
   const typeLabel = { rq: "🔬 RQ提案", keywords: "🔍 キーワード提案", literature: "📚 関連文献", direction: "🔭 研究の方向性" };
  
   const entriesByDate = {};
   currentEntries.forEach(e => {
-    const d = new Date(e.dateTime).getDate();
+    const d = getLocalParts(e.dateTime, e.date)?.day;
+    if (!d) return;
     if (!entriesByDate[d]) entriesByDate[d] = [];
     entriesByDate[d].push(e);
   });
