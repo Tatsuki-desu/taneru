@@ -1098,10 +1098,10 @@ ${chatInput}`);
                           <button onClick={() => handleDeletePromoted(entry.id)} style={{ background: "transparent", border: "none", color: C.inkLight, cursor: "pointer", fontSize: 14 }}>❌</button>
                         </div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                          {entry.type === "opp" && <span style={{ fontSize: 10, background: "#6B5B9522", color: "#6B5B95", borderRadius: 20, padding: "1px 7px", border: "1px solid #6B5B9544" }}>📋 OPP</span>}
+                          {entry.type === "chat" && <span style={{ fontSize: 10, background: "#4A90D922", color: "#4A90D9", borderRadius: 20, padding: "1px 7px", border: "1px solid #4A90D944" }}>💬 チャット</span>}
                           {sharedEntryIds.includes(entry.entryId || entry.id) && <span style={{ fontSize: 10, background: C.terra + "22", color: C.terra, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.terra}44` }}>📋 共有済</span>}
                         </div>
-                        {entry.type === "opp" && <span style={{ fontSize: 10, background: "#6B5B9522", color: "#6B5B95", borderRadius: 20, padding: "1px 7px", border: "1px solid #6B5B9544", display: "inline-block", marginBottom: 6 }}>📋 OPP</span>}
-                        {entry.type === "chat" && <span style={{ fontSize: 10, background: "#4A90D922", color: "#4A90D9", borderRadius: 20, padding: "1px 7px", border: "1px solid #4A90D944", display: "inline-block", marginBottom: 6 }}>💬 チャット</span>}
                         {entry.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6, whiteSpace: "pre-wrap", marginBottom: 2 }}>{entry.type === "opp" ? "⭐ " : ""}{entry.event}</div>}
                         {entry.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.6, fontStyle: "italic", whiteSpace: "pre-wrap", marginBottom: 2 }}>{entry.type === "opp" ? "💭 " : "💡 "}{entry.question}</div>}
                         {entry.feedback && <div style={{ fontSize: 13, color: C.gold, lineHeight: 1.6, fontStyle: "italic", whiteSpace: "pre-wrap", marginBottom: 2 }}>👨‍🏫 {entry.feedback}</div>}
