@@ -1378,12 +1378,17 @@
         if (filtered.length === 0) { alert("指定した期間に記録がありません。"); return; }
         const dateLabel = exportStart || exportEnd ? `${exportStart || "最初"} 〜 ${exportEnd || "最新"}` : "全期間";
         let text = `===========================\nTaneru｜日記の記録\n出力日：${new Date().toLocaleDateString("ja-JP")}\n期間：${dateLabel}\n===========================\n\n`;
+        let promoted = [];
+        try { promoted = await fsGetPromoted(); } catch(e) {}
+        const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
         filtered.forEach(e => {
-          text += `■ ${e.date}\n`;
-          if (e.event) text += `【出来事・観察】\n${e.event}\n\n`;
+          const promotedTabs = promoted.filter(p => (p.entryId || p.id) === e.id).map(p => tabLabels[p.tab]);
+          const proLabel = promotedTabs.length > 0 ? `　[🔬 ${promotedTabs.join("・")}昇格]` : "";
+          text += `■ ${e.date}${proLabel}\n`;
+          if (e.event) text += `【出来事・観察（事実）】\n${e.event}\n\n`;
           if (e.question) text += `【疑問・気づき（考え）】\n${e.question}\n\n`;
           if (e.feedback) text += `【指導教員のフィードバック】\n${e.feedback}\n\n`;
-          if (e.tags && e.tags.length > 0) text += `【タグ】${e.tags.join("　")}\n`;
+          if (e.keywordTags && e.keywordTags.length > 0) text += `【キーワードタグ】${e.keywordTags.join("　")}\n`;
           text += "---------------------------\n\n";
         });
         downloadText(`taneru_diary_${exportStart || "all"}.txt`, text);
@@ -1420,18 +1425,40 @@
           text += `\n========== ${label} ==========\n\n■ RQ（${rqStatus[i]}）\n${rqText[i] || "（未入力）"}\n\n`;
           const pro = promoted.filter(p => p.tab === i);
           text += `■ 昇格した気づき（${pro.length}件）\n`;
-          pro.forEach(p => { text += `\n${p.date||""}\n`; if (p.event) text += `【事実】${p.event}\n`; if (p.question) text += `【考え】${p.question}\n`; });
+          pro.forEach(p => {
+            const isOpp = p.type === "opp";
+            text += `\n${p.date||""}${isOpp ? "　[OPP]" : ""}\n`;
+            if (isOpp) {
+              if (p.event) text += `【学修で重要だったこと】${p.event}\n`;
+              if (p.question) text += `【疑問点・感想】${p.question}\n`;
+              if (p.feedback) text += `【教員コメント】${p.feedback}\n`;
+            } else {
+              if (p.event) text += `【事実】${p.event}\n`;
+              if (p.question) text += `【考え】${p.question}\n`;
+              if (p.feedback) text += `【指導教員のフィードバック】${p.feedback}\n`;
+            }
+          });
           const lits = literatures.filter(l => l.tab === i);
           text += `\n■ 文献メモ（${lits.length}件）\n`;
           lits.forEach(l => { text += `\n【${l.title}】\n`; if (l.note) text += `${l.note}\n`; });
         });
         text += `\n\n===========================\n■ 日記の記録（${filtered.length}件）\n===========================\n\n`;
         filtered.forEach(e => {
-          text += `■ ${e.date}\n`;
-          if (e.event) text += `【出来事・観察】\n${e.event}\n\n`;
-          if (e.question) text += `【疑問・気づき（考え）】\n${e.question}\n\n`;
-          if (e.feedback) text += `【指導教員のフィードバック】\n${e.feedback}\n\n`;
-          if (e.tags && e.tags.length > 0) text += `【タグ】${e.tags.join("　")}\n`;
+          const isOpp = e.type === "opp";
+          const promotedTabs = promoted.filter(p => (p.entryId || p.id) === e.id).map(p => tabLabels[p.tab]);
+          const proLabel = promotedTabs.length > 0 ? `　[🔬 ${promotedTabs.join("・")}昇格]` : "";
+          const oppLabel = isOpp ? "　[OPP]" : "";
+          text += `■ ${e.date}${oppLabel}${proLabel}\n`;
+          if (isOpp) {
+            if (e.event) text += `【学修で重要だったこと】\n${e.event}\n\n`;
+            if (e.question) text += `【疑問点・感想】\n${e.question}\n\n`;
+            if (e.feedback) text += `【教員コメント】\n${e.feedback}\n\n`;
+          } else {
+            if (e.event) text += `【出来事・観察（事実）】\n${e.event}\n\n`;
+            if (e.question) text += `【疑問・気づき（考え）】\n${e.question}\n\n`;
+            if (e.feedback) text += `【指導教員のフィードバック】\n${e.feedback}\n\n`;
+          }
+          if (e.keywordTags && e.keywordTags.length > 0) text += `【キーワードタグ】${e.keywordTags.join("　")}\n`;
           text += "---------------------------\n\n";
         });
         downloadText(`taneru_report_${exportStart || "all"}.txt`, text);
