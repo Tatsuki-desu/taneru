@@ -246,7 +246,7 @@
           "上部の「📔 日記」「📋 OPP」「💬 チャット」タブで記録の種類を切り替えます。",
           "【📔 日記】日付を選んで、出来事（事実）・疑問・気づき（考え）・フィードバックを記録します。",
           "【📋 OPP】毎週のOPPシートを記録します。学修で重要だったこと・疑問点・教員コメントを入力します。",
-          "【💬 チャット】Claude.aiとのチャット内容を貼り付けると、気づきを自動で整形して記録できます（2000文字まで）。",
+          "【💬 チャット】Claude.aiとのチャット内容を貼り付けると、気づきを自動で整形して記録できます（10000文字まで）。",
           "感情タグ（驚き・モヤモヤ・ひらめき・疑問）で気持ちも記録できます。",
           "キーワードタグを手動で追加するか、「🤖 AIにタグを提案してもらう」で自動付与できます。",
           "タグをタップすると一覧をタグで絞り込めます。",
@@ -292,7 +292,7 @@
           "記録が表示されない → ページを再読み込みしてください。",
           "カレンダーに記録が出ない → 月の切り替えボタンで正しい月を表示しているか確認してください。",
           "AI機能が使えない → 設定画面でAPIキーを確認してください。",
-          "チャット整形がうまくいかない → 2000文字以内に収めて再試行してください。",
+          "チャット整形がうまくいかない → 10000文字以内に収めて再試行してください。",
           "ログインできない → メールアドレスとパスワードを確認してください。管理者に連絡しましょう。"
         ] },
       ];
@@ -650,7 +650,7 @@
       // 💬 チャット整形
       const handleExtract = async () => {
         if (!chatInput.trim()) { alert("チャット内容を貼り付けてください。"); return; }
-        if (chatInput.length > 2000) { alert("2000文字以内に収めてください。"); return; }
+        if (chatInput.length > 10000) { alert("10000文字以内に収めてください。"); return; }
         setChatLoading(true);
         const result = await callAI(`以下はClaudeとのチャット内容です。この内容から教育実習生の気づきを抽出して、必ずJSONのみで返してください（前置き・説明・backtick不要）。
  
@@ -824,8 +824,8 @@ ${chatInput}`);
               <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 16, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, outline: "none", display: "block" }} />
             </div>
             <textarea value={chatInput} onChange={(e) => setChatInput(e.target.value)} rows={6} placeholder="ここにClaudeとのチャット内容を貼り付けてください..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "12px 14px", fontSize: 13, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.bg, color: C.ink, resize: "none", outline: "none", lineHeight: 1.6 }} />
-            <div style={{ fontSize: 10, color: chatInput.length > 2000 ? C.terra : C.inkLight, textAlign: "right", marginTop: 4, marginBottom: 10 }}>{chatInput.length} / 2000文字</div>
-            <button onClick={handleExtract} disabled={chatLoading || chatInput.length > 2000} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", width: "100%", marginBottom: chatExtracted ? 14 : 0, opacity: chatInput.length > 2000 ? 0.5 : 1 }}>
+            <div style={{ fontSize: 10, color: chatInput.length > 10000 ? C.terra : C.inkLight, textAlign: "right", marginTop: 4, marginBottom: 10 }}>{chatInput.length} / 10000文字</div>
+            <button onClick={handleExtract} disabled={chatLoading || chatInput.length > 10000} style={{ background: C.green, color: C.cream, border: "none", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", width: "100%", marginBottom: chatExtracted ? 14 : 0, opacity: chatInput.length > 10000 ? 0.5 : 1 }}>
               {chatLoading ? "整形中..." : "🔍 気づきを整形する"}
             </button>
             {chatExtracted && (
