@@ -1198,40 +1198,47 @@
   };
   const isCurrentMonth = viewYear === realNow.getFullYear() && viewMonth === realNow.getMonth();
  
-  // エントリのローカル月・年・日を取得するヘルパー（タイムゾーンに依存しない）
-  const getLocalParts = (dateTime, dateStr) => {
-    if (dateTime) {
-      const d = new Date(dateTime);
-      if (!isNaN(d.getTime())) return { y: d.getFullYear(), m: d.getMonth(), day: d.getDate() };
-    }
-    if (dateStr) {
-      const parts = dateStr.split('/');
-      if (parts.length === 2) return { y: year, m: parseInt(parts[0]) - 1, day: parseInt(parts[1]) };
-    }
-    return null;
+  // dateTime（ISO文字列）からローカル日付文字列「YYYY-MM-DD」を取得
+  const toLocalDateStr = (dateTime) => {
+    if (!dateTime) return null;
+    const d = new Date(dateTime);
+    if (isNaN(d.getTime())) return null;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
   };
  
-  // 表示中の年・月に一致する記録だけ対象にする
-  const currentEntries = entries.filter(e => {
-    const p = getLocalParts(e.dateTime, e.date);
-    return p && p.y === year && p.m === month;
-  });
-  const currentAiLogs = aiLogs.filter(l => {
-    const p = getLocalParts(l.dateTime, l.date);
-    return p && p.y === year && p.m === month;
+  // 現在表示中の月のプレフィックス: "2026-05"
+  const viewMonthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+ 
+  // 全エントリを「YYYY-MM-DD」でグループ化
+  const entriesByDate = {};
+  entries.forEach(e => {
+    const ds = toLocalDateStr(e.dateTime);
+    if (!ds) return;
+    if (!entriesByDate[ds]) entriesByDate[ds] = [];
+    entriesByDate[ds].push(e);
   });
  
-  const recordedDays = [...new Set(currentEntries.map(e => getLocalParts(e.dateTime, e.date)?.day).filter(Boolean))];
-  const aiDays = [...new Set(currentAiLogs.map(l => getLocalParts(l.dateTime, l.date)?.day).filter(Boolean))];
+  // 今月の日付のみ
+  const recordedDays = Object.keys(entriesByDate)
+    .filter(ds => ds.startsWith(viewMonthPrefix))
+    .map(ds => parseInt(ds.split("-")[2]));
+ 
+  const aiLogsByDate = {};
+  aiLogs.forEach(l => {
+    const ds = toLocalDateStr(l.dateTime);
+    if (!ds) return;
+    if (!aiLogsByDate[ds]) aiLogsByDate[ds] = [];
+    aiLogsByDate[ds].push(l);
+  });
+  const aiDays = Object.keys(aiLogsByDate)
+    .filter(ds => ds.startsWith(viewMonthPrefix))
+    .map(ds => parseInt(ds.split("-")[2]));
   const typeLabel = { rq: "🔬 RQ提案", keywords: "🔍 キーワード提案", literature: "📚 関連文献", direction: "🔭 研究の方向性" };
  
-  const entriesByDate = {};
-  currentEntries.forEach(e => {
-    const d = getLocalParts(e.dateTime, e.date)?.day;
-    if (!d) return;
-    if (!entriesByDate[d]) entriesByDate[d] = [];
-    entriesByDate[d].push(e);
-  });
+ 
  
   const handleDayClick = (d) => {
     setSelectedDay(d === selectedDay ? null : d);
@@ -1287,27 +1294,42 @@
             <div style={{ fontSize: 13 }}>まだ記録がありません</div>
           </div>
         ) : (
-          Object.keys(entriesByDate).sort((a, b) => b - a).map(day => {
-            const dayEntries = entriesByDate[day];
-            const dayAILogs = currentAiLogs.filter(l => new Date(l.dateTime).getDate() === parseInt(day));
-            const isSelected = parseInt(day) === selectedDay;
+          Object.keys(entriesByDate)
+            .filter(ds => ds.startsWith(viewMonthPrefix))
+            .sort((a, b) => b.localeCompare(a))
+            .map(dateStr => {
+            const dayNum = parseInt(dateStr.split("-")[2]);
+            const dayEntries = entriesByDate[dateStr];
+            const dayAILogs = aiLogsByDate[dateStr] || [];
+            const isSelected = dayNum === selectedDay;
             return (
-              <div key={day} ref={el => dateRefs.current[parseInt(day)] = el} style={{ marginBottom: 18 }}>
+              <div key={dateStr} ref={el => dateRefs.current[dayNum] = el} style={{ marginBottom: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                   <div style={{ background: isSelected ? C.terra : C.green, color: "#fff", borderRadius: 20, padding: "3px 14px", fontSize: 12, fontWeight: "bold", flexShrink: 0 }}>
-                    {month + 1}月{day}日
+                    {month + 1}月{dayNum}日
                   </div>
                   <div style={{ flex: 1, height: 1, background: C.bgDeep }} />
                 </div>
                 {dayEntries.map(e => (
                   <div key={e.id} style={{ background: C.cream, border: `1px solid ${C.bgDeep}`, borderLeft: `4px solid ${C.terra}`, borderRadius: 14, padding: "12px 16px", marginBottom: 8 }}>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                      {e.type === "opp" && <span style={{ fontSize: 10, background: "#6B5B9522", color: "#6B5B95", borderRadius: 20, padding: "1px 7px", border: "1px solid #6B5B9544" }}>📋 OPP</span>}
                       {promotedEntries.some(p => (p.entryId || p.id) === e.id) && <span style={{ fontSize: 10, background: C.green + "22", color: C.green, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.green}44` }}>🔬 研究中</span>}
                       {sharedEntryIds.includes(e.id) && <span style={{ fontSize: 10, background: C.terra + "22", color: C.terra, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.terra}44` }}>📋 共有済</span>}
                     </div>
-                    {e.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 4, whiteSpace: "pre-wrap" }}>{e.event}</div>}
-                    {e.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.7, fontStyle: "italic", marginBottom: 4, whiteSpace: "pre-wrap" }}>💡 {e.question}</div>}
-                    {e.feedback && <div style={{ fontSize: 13, color: C.gold, lineHeight: 1.7, fontStyle: "italic", whiteSpace: "pre-wrap" }}>👨‍🏫 {e.feedback}</div>}
+                    {e.type === "opp" ? (
+                      <>
+                        {e.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 4, whiteSpace: "pre-wrap" }}>⭐ {e.event}</div>}
+                        {e.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.7, fontStyle: "italic", marginBottom: 4, whiteSpace: "pre-wrap" }}>💭 {e.question}</div>}
+                        {e.feedback && <div style={{ fontSize: 13, color: C.gold, lineHeight: 1.7, fontStyle: "italic", whiteSpace: "pre-wrap" }}>👨‍🏫 {e.feedback}</div>}
+                      </>
+                    ) : (
+                      <>
+                        {e.event && <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 4, whiteSpace: "pre-wrap" }}>{e.event}</div>}
+                        {e.question && <div style={{ fontSize: 13, color: C.greenMid, lineHeight: 1.7, fontStyle: "italic", marginBottom: 4, whiteSpace: "pre-wrap" }}>💡 {e.question}</div>}
+                        {e.feedback && <div style={{ fontSize: 13, color: C.gold, lineHeight: 1.7, fontStyle: "italic", whiteSpace: "pre-wrap" }}>👨‍🏫 {e.feedback}</div>}
+                      </>
+                    )}
                     {e.tags && e.tags.length > 0 && (
                       <div style={{ marginTop: 6 }}>
                         {e.tags.map(t => <span key={t} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 20, fontSize: 10, background: C.terra + "22", color: C.terra, marginRight: 4 }}>{t}</span>)}
