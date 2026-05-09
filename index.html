@@ -1294,9 +1294,10 @@
             <div style={{ fontSize: 13 }}>まだ記録がありません</div>
           </div>
         ) : (
-          Object.keys(entriesByDate)
-            .filter(ds => ds.startsWith(viewMonthPrefix))
-            .sort((a, b) => b.localeCompare(a))
+          [...new Set([
+              ...Object.keys(entriesByDate).filter(ds => ds.startsWith(viewMonthPrefix)),
+              ...Object.keys(aiLogsByDate).filter(ds => ds.startsWith(viewMonthPrefix))
+            ])].sort((a, b) => b.localeCompare(a))
             .map(dateStr => {
             const dayNum = parseInt(dateStr.split("-")[2]);
             const dayEntries = entriesByDate[dateStr];
