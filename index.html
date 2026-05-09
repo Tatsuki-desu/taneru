@@ -879,6 +879,7 @@ ${chatInput}`);
                     <span style={{ fontSize: 11, color: C.inkLight }}>{entry.date}</span>
                     {entry.type === "opp" && <span style={{ fontSize: 10, background: "#6B5B95" + "22", color: "#6B5B95", borderRadius: 20, padding: "1px 7px", border: "1px solid #6B5B9544" }}>📋 OPP</span>}
                     {entry.type === "chat" && <span style={{ fontSize: 10, background: "#4A90D9" + "22", color: "#4A90D9", borderRadius: 20, padding: "1px 7px", border: "1px solid #4A90D944" }}>💬 チャット</span>}
+                    {entry.type === "ai_direction" && <span style={{ fontSize: 10, background: C.gold + "33", color: C.gold, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.gold}66` }}>🔭 方向性</span>}
                     {promotedEntries.some(p => (p.entryId || p.id) === entry.id) && <span style={{ fontSize: 10, background: C.green + "22", color: C.green, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.green}44` }}>🔬 研究中</span>}
                     {sharedEntryIds.includes(entry.id) && <span style={{ fontSize: 10, background: C.terra + "22", color: C.terra, borderRadius: 20, padding: "1px 7px", border: `1px solid ${C.terra}44` }}>📋 共有済</span>}
                   </div>
@@ -939,6 +940,7 @@ ${chatInput}`);
       const [aiKeywords, setAiKeywords] = useState(localStorage.getItem(localKey("ai_keywords")) || "");
       const [aiLiterature, setAiLiterature] = useState(localStorage.getItem(localKey("ai_literature")) || "");
       const [aiDirection, setAiDirection] = useState(localStorage.getItem(localKey("ai_direction")) || "");
+      const [directionSaved, setDirectionSaved] = useState(false);
       const [sharedEntryIds, setSharedEntryIds] = useState([]);
  
       useEffect(() => {
@@ -1121,7 +1123,23 @@ ${chatInput}`);
                       <div style={{ background: C.green + "11", border: `1px solid ${C.green}33`, borderRadius: 12, padding: "14px", marginTop: 12, fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
                         <div style={{ fontSize: 11, fontWeight: "bold", color: C.green, marginBottom: 8 }}>🔭 研究の方向性</div>
                         {aiDirection}
-                        <button onClick={() => { setAiDirection(""); localStorage.removeItem(localKey("ai_direction")); }} style={{ marginTop: 8, background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
+                        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                          <button onClick={async () => {
+                            const entry = {
+                              date: new Date().toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
+                              dateTime: new Date().toISOString(),
+                              event: `🔭 研究の方向性（${tabLabels[tab]}）`,
+                              question: aiDirection,
+                              feedback: "", tags: [], keywordTags: [], type: "ai_direction",
+                            };
+                            try { await fsAddEntry(entry); } catch(e) {}
+                            setDirectionSaved(true);
+                            setTimeout(() => setDirectionSaved(false), 2000);
+                          }} style={{ background: "transparent", border: `1.5px solid ${C.green}`, color: C.green, borderRadius: 10, fontSize: 11, padding: "4px 10px", cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>
+                            {directionSaved ? "保存しました！✓" : "📝 記録として保存する"}
+                          </button>
+                          <button onClick={() => { setAiDirection(""); localStorage.removeItem(localKey("ai_direction")); }} style={{ background: "transparent", border: "none", color: C.inkLight, fontSize: 11, cursor: "pointer" }}>× 消す</button>
+                        </div>
                       </div>
                     )}
                   </div>
