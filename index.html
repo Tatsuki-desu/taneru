@@ -1631,6 +1631,7 @@ ${chatInput}`);
     function SettingsScreen({ onLogout, userEmail }) {
       const [exportStart, setExportStart] = useState("");
       const [exportEnd, setExportEnd] = useState("");
+      const [exportInstruction, setExportInstruction] = useState(true);
  
       const handleLogout = async () => {
         if (!window.confirm("ログアウトしますか？")) return;
@@ -1654,7 +1655,8 @@ ${chatInput}`);
         try { entries = await fsGetEntries(); } catch(e) { entries = loadEntriesLocal(); }
         const filtered = entries.filter(e => e.type === "opp").sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
         if (filtered.length === 0) { alert("OPPの記録がありません。"); return; }
-        let text = `===========================\nTaneru｜OPPシート記録\n出力日：${new Date().toLocaleDateString("ja-JP")}\n===========================\n\n`;
+        const instruction = exportInstruction ? `【Claudeへの指示】\n・構造や順序は変えないでください\n・私の言葉と思考の流れを尊重してください\n・文章化と表現の整理だけ手伝ってください\n\n` : "";
+        let text = instruction + `===========================\nTaneru｜OPPシート記録\n出力日：${new Date().toLocaleDateString("ja-JP")}\n===========================\n\n`;
         filtered.forEach(e => {
           text += `■ ${e.date}\n`;
           if (e.event) text += `【学修を通して一番重要だったこと】\n${e.event}\n\n`;
@@ -1674,7 +1676,8 @@ ${chatInput}`);
         const filtered = entries.filter(e => { const d = new Date(e.dateTime); if (e.type === "opp") return false; if (start && d < start) return false; if (end && d > end) return false; return true; });
         if (filtered.length === 0) { alert("指定した期間に記録がありません。"); return; }
         const dateLabel = exportStart || exportEnd ? `${exportStart || "最初"} 〜 ${exportEnd || "最新"}` : "全期間";
-        let text = `===========================\nTaneru｜日記の記録\n出力日：${new Date().toLocaleDateString("ja-JP")}\n期間：${dateLabel}\n===========================\n\n`;
+        const instruction = exportInstruction ? `【Claudeへの指示】\n・構造や順序は変えないでください\n・私の言葉と思考の流れを尊重してください\n・文章化と表現の整理だけ手伝ってください\n\n` : "";
+        let text = instruction + `===========================\nTaneru｜日記の記録\n出力日：${new Date().toLocaleDateString("ja-JP")}\n期間：${dateLabel}\n===========================\n\n`;
         let promoted = [];
         try { promoted = await fsGetPromoted(); } catch(e) {}
         const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
@@ -1695,7 +1698,8 @@ ${chatInput}`);
         try { const note = await fsGetResearchNote(); if (note) { rqText = note.rqText||["",""]; rqStatus = note.rqStatus||["仮","仮"]; } promoted = await fsGetPromoted(); literatures = await fsGetLiteratures(); }
         catch(e) { const rq = JSON.parse(localStorage.getItem(localKey("rq")) || '{"text":["",""],"status":["仮","仮"]}'); rqText = rq.text; rqStatus = rq.status; }
         const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
-        let text = `===========================\nTaneru｜研究ノート\n出力日：${new Date().toLocaleDateString("ja-JP")}\n===========================\n\n`;
+        const instruction = exportInstruction ? `【Claudeへの指示】\n・構造や順序は変えないでください\n・私の言葉と思考の流れを尊重してください\n・文章化と表現の整理だけ手伝ってください\n\n` : "";
+        let text = instruction + `===========================\nTaneru｜研究ノート\n出力日：${new Date().toLocaleDateString("ja-JP")}\n===========================\n\n`;
         tabLabels.forEach((label, i) => {
           text += `\n========== ${label} ==========\n\n■ RQ（${rqStatus[i]}）\n${rqText[i] || "（未入力）"}\n\n`;
           const pro = promoted.filter(p => p.tab === i);
@@ -1717,7 +1721,8 @@ ${chatInput}`);
         try { const note = await fsGetResearchNote(); if (note) { rqText = note.rqText||["",""]; rqStatus = note.rqStatus||["仮","仮"]; } promoted = await fsGetPromoted(); literatures = await fsGetLiteratures(); } catch(e) {}
         const tabLabels = ["実地研究Ⅱ", "課題研究Ⅱ"];
         const dateLabel = exportStart || exportEnd ? `${exportStart || "最初"} 〜 ${exportEnd || "最新"}` : "全期間";
-        let text = `===========================\nTaneru｜全体レポート\n出力日：${new Date().toLocaleDateString("ja-JP")}\n日記の期間：${dateLabel}\n===========================\n\n`;
+        const instruction = exportInstruction ? `【Claudeへの指示】\n・構造や順序は変えないでください\n・私の言葉と思考の流れを尊重してください\n・文章化と表現の整理だけ手伝ってください\n\n` : "";
+        let text = instruction + `===========================\nTaneru｜全体レポート\n出力日：${new Date().toLocaleDateString("ja-JP")}\n日記の期間：${dateLabel}\n===========================\n\n`;
         tabLabels.forEach((label, i) => {
           text += `\n========== ${label} ==========\n\n■ RQ（${rqStatus[i]}）\n${rqText[i] || "（未入力）"}\n\n`;
           const pro = promoted.filter(p => p.tab === i);
@@ -1790,6 +1795,15 @@ ${chatInput}`);
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div onClick={() => setExportInstruction(v => !v)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: exportInstruction ? C.green + "15" : C.bg, border: `1.5px solid ${exportInstruction ? C.green : C.bgDeep}`, borderRadius: 12, cursor: "pointer", marginBottom: 4 }}>
+                <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${exportInstruction ? C.green : C.inkLight}`, background: exportInstruction ? C.green : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {exportInstruction && <span style={{ color: "#fff", fontSize: 12, lineHeight: 1 }}>✓</span>}
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: "bold", color: exportInstruction ? C.green : C.inkLight }}>Claudeへの指示文をつける</div>
+                  <div style={{ fontSize: 10, color: C.inkLight, marginTop: 2 }}>構造・順序を変えず、文章化だけ手伝ってもらう旨を先頭に追加します</div>
+                </div>
+              </div>
               <button onClick={exportDiary} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>① 日記の記録をエクスポート</button>
               <button onClick={exportOPP} style={{ background: "transparent", color: "#6B5B95", border: "1.5px solid #6B5B95", borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>② OPPシートをエクスポート</button>
               <button onClick={exportResearch} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 12, padding: "11px", fontSize: 13, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>③ 研究ノートをエクスポート</button>
