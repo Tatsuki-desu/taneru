@@ -711,6 +711,8 @@ ${chatInput}`);
       const handleNoteOCR = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        const apiKey = localStorage.getItem("taneru_api_key");
+        if (!apiKey) { alert("設定画面でAPIキーを入力してください。"); return; }
         setNoteOcrLoading(true);
         try {
           let imageFile = file;
@@ -729,9 +731,14 @@ ${chatInput}`);
           // Claude Vision APIで抽出
           const response = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": apiKey,
+              "anthropic-version": "2023-06-01",
+              "anthropic-dangerous-direct-browser-access": "true"
+            },
             body: JSON.stringify({
-              model: "claude-sonnet-4-20250514",
+              model: "claude-opus-4-6",
               max_tokens: 2000,
               messages: [{
                 role: "user",
@@ -743,6 +750,7 @@ ${chatInput}`);
             })
           });
           const data = await response.json();
+          if (data.error) { alert("APIエラー：" + data.error.message); setNoteOcrLoading(false); return; }
           const extracted = data.content?.[0]?.text || "";
           if (extracted) {
             const newText = noteOcrText ? noteOcrText + "\n\n---\n\n" + extracted : extracted;
