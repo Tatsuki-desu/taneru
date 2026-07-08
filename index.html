@@ -589,7 +589,7 @@
       };
  
       const handleSave = async () => {
-        if (!event.trim() && !question.trim()) return;
+        if (!event.trim() && !question.trim() && !feedback.trim()) return;
         const newEntry = {
           date: new Date(selectedDate + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }),
           dateTime: new Date(selectedDate + "T00:00:00").toISOString(),
@@ -644,7 +644,7 @@
  
       // ③ キーワードタグ：AI提案
       const handleAITags = async () => {
-        if (!event.trim() && !question.trim()) { alert("まず出来事や気づきを入力してください。"); return; }
+        if (!event.trim() && !question.trim() && !feedback.trim()) { alert("まず出来事や気づきを入力してください。"); return; }
         setAiTagLoading(true);
         const result = await callAI(`以下の教育実習生の気づきの記録に対して、内容を表すキーワードタグを3〜5個提案してください。タグは短い名詞や動詞で、検索・分類しやすいものにしてください。\n\n【出来事】${event}\n【気づき】${question}\n\n【出力形式】タグのみをカンマ区切りで出力してください。例：子どもの発言,授業構成,教師の介入`);
         if (result) {
