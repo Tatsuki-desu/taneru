@@ -1435,6 +1435,8 @@ ${chatInput}`);
   const [promotedEntries, setPromotedEntries] = useState([]);
   const [sharedEntryIds, setSharedEntryIds] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
+  const [search, setSearch] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
   const dateRefs = React.useRef({});
   const scrollRef = React.useRef(null);
  
@@ -1514,6 +1516,44 @@ ${chatInput}`);
  
  
  
+  // 🔬 研究に使う（記録タブと同じロジック）
+  const handlePromote = async (entry) => {
+    const promotedTabs = promotedEntries.filter(p => (p.entryId || p.id) === entry.id).map(p => p.tab);
+    if (promotedTabs.includes(0) && promotedTabs.includes(1)) {
+      alert("この記録はすでに実地研究Ⅱと課題研究Ⅱの両方に追加されています。\n研究ノート画面で確認できます。");
+      return;
+    }
+    let tab;
+    if (promotedTabs.includes(0)) {
+      if (!window.confirm("この記録はすでに実地研究Ⅱに追加されています。\n課題研究Ⅱにも追加しますか？")) return;
+      tab = 1;
+    } else if (promotedTabs.includes(1)) {
+      if (!window.confirm("この記録はすでに課題研究Ⅱに追加されています。\n実地研究Ⅱにも追加しますか？")) return;
+      tab = 0;
+    } else {
+      tab = window.confirm("実地研究Ⅱに追加しますか？\nOK → 実地研究Ⅱ\nキャンセル → 課題研究Ⅱ") ? 0 : 1;
+    }
+    try {
+      await fsAddPromoted({ ...entry, entryId: entry.id, tab, promotedAt: new Date().toISOString() });
+      setPromotedEntries(prev => [...prev, { ...entry, entryId: entry.id, tab, promotedAt: new Date().toISOString() }]);
+      alert("研究ノートに追加しました！");
+    }
+    catch(e) { alert("追加に失敗しました。"); }
+  };
+ 
+  // 🔍 検索・タグ絞り込み（記録タブと同じ判定ロジック。マッチ時は月をまたいで全期間から探す）
+  const allKeywordTagsCalendar = [...new Set(entries.flatMap(e => e.keywordTags || []))];
+  const searchActive = search.trim() !== "" || tagFilter !== "";
+  const matchesFilter = (e) => {
+    if (tagFilter) return (e.keywordTags || []).includes(tagFilter);
+    if (search.trim()) {
+      const kw = search.trim().toLowerCase();
+      return (e.event || "").toLowerCase().includes(kw) || (e.question || "").toLowerCase().includes(kw) || (e.feedback || "").toLowerCase().includes(kw);
+    }
+    return true;
+  };
+  const searchMatchCount = searchActive ? entries.filter(matchesFilter).length : 0;
+ 
   const handleDayClick = (d) => {
     setSelectedDay(d === selectedDay ? null : d);
     if (recordedDays.includes(d) && dateRefs.current[d] && scrollRef.current) {
@@ -1560,6 +1600,28 @@ ${chatInput}`);
         </div>
       </div>
  
+      {/* 🔍 タグ絞り込み・検索欄（固定） */}
+      {entries.length > 0 && (
+        <div style={{ flexShrink: 0, marginBottom: 10 }}>
+          {allKeywordTagsCalendar.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: C.inkLight, marginBottom: 6 }}>🏷 タグで絞り込む</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {allKeywordTagsCalendar.map(t => (
+                  <span key={t} onClick={() => { setTagFilter(prev => prev === t ? "" : t); setSearch(""); }} style={{ display: "inline-block", padding: "4px 12px", borderRadius: 20, fontSize: 12, cursor: "pointer", background: tagFilter === t ? C.green : C.green + "18", color: tagFilter === t ? "#fff" : C.green, border: `1px solid ${C.green}33`, transition: "all 0.15s" }}>{t}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setTagFilter(""); }} placeholder="🔍 キーワードで検索（全期間から探す）..." style={{ width: "100%", border: `1.5px solid ${C.bgDeep}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif", background: C.cream, color: C.ink, outline: "none" }} />
+          {searchActive && (
+            <div style={{ fontSize: 11, color: C.inkLight, marginTop: 6, textAlign: "right" }}>
+              {tagFilter ? `🏷「${tagFilter}」タグの記録：${searchMatchCount}件` : `「${search}」の検索結果：${searchMatchCount}件`}
+            </div>
+          )}
+        </div>
+      )}
+ 
       {/* 記録一覧（スクロール） */}
       <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
         {entries.length === 0 ? (
@@ -1567,21 +1629,29 @@ ${chatInput}`);
             <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.4 }}>🌱</div>
             <div style={{ fontSize: 13 }}>まだ記録がありません</div>
           </div>
+        ) : searchActive && searchMatchCount === 0 ? (
+          <div style={{ textAlign: "center", padding: "30px 20px", color: C.inkLight }}>
+            <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.4 }}>🌱</div>
+            <div style={{ fontSize: 13 }}>検索結果がありません</div>
+          </div>
         ) : (
-          [...new Set([
-              ...Object.keys(entriesByDate).filter(ds => ds.startsWith(viewMonthPrefix)),
-              ...Object.keys(aiLogsByDate).filter(ds => ds.startsWith(viewMonthPrefix))
-            ])].sort((a, b) => b.localeCompare(a))
+          (searchActive
+            ? [...new Set(entries.filter(matchesFilter).map(e => toLocalDateStr(e.dateTime)).filter(Boolean))]
+            : [...new Set([
+                ...Object.keys(entriesByDate).filter(ds => ds.startsWith(viewMonthPrefix)),
+                ...Object.keys(aiLogsByDate).filter(ds => ds.startsWith(viewMonthPrefix))
+              ])]
+          ).sort((a, b) => b.localeCompare(a))
             .map(dateStr => {
             const dayNum = parseInt(dateStr.split("-")[2]);
-            const dayEntries = entriesByDate[dateStr];
-            const dayAILogs = aiLogsByDate[dateStr] || [];
+            const dayEntries = searchActive ? (entriesByDate[dateStr] || []).filter(matchesFilter) : entriesByDate[dateStr];
+            const dayAILogs = searchActive ? [] : (aiLogsByDate[dateStr] || []);
             const isSelected = dayNum === selectedDay;
             return (
               <div key={dateStr} ref={el => dateRefs.current[dayNum] = el} style={{ marginBottom: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                   <div style={{ background: isSelected ? C.terra : C.green, color: "#fff", borderRadius: 20, padding: "3px 14px", fontSize: 12, fontWeight: "bold", flexShrink: 0 }}>
-                    {month + 1}月{dayNum}日
+                    {searchActive ? `${parseInt(dateStr.split("-")[1])}月${dayNum}日` : `${month + 1}月${dayNum}日`}
                   </div>
                   <div style={{ flex: 1, height: 1, background: C.bgDeep }} />
                 </div>
@@ -1610,6 +1680,16 @@ ${chatInput}`);
                         {e.tags.map(t => <span key={t} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 20, fontSize: 10, background: C.terra + "22", color: C.terra, marginRight: 4 }}>{t}</span>)}
                       </div>
                     )}
+                    {e.keywordTags && e.keywordTags.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                        {e.keywordTags.map(t => (
+                          <span key={t} onClick={() => { setTagFilter(prev => prev === t ? "" : t); setSearch(""); }} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 20, fontSize: 10, background: C.green + "18", color: C.green, border: `1px solid ${C.green}33`, cursor: "pointer" }}>{t}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 8 }}>
+                      <button onClick={() => handlePromote(e)} style={{ background: "transparent", color: C.green, border: `1.5px solid ${C.green}`, borderRadius: 10, padding: "6px 12px", fontSize: 11, cursor: "pointer", fontFamily: "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif" }}>🔬 研究に使う</button>
+                    </div>
                   </div>
                 ))}
                 {dayAILogs.length > 0 && dayAILogs.map(log => (
